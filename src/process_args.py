@@ -5,7 +5,10 @@
 # --output: (Required) output file names without suffix (eg. BioVU_chr21)
 # --verbose: (Optional)
 #   If print out detailed information, default is true
-#   valid values: [true/True/1, false/False/not 1] v
+#   valid values: [true/True/1, false/False/not 1]
+# --missing: (optional)
+#   Defines number of missing values allowed for each variant.
+#   Default is 0. Cannot exceed total number of input files.
 # --r2_threshold: (Optional)
 #   Filtering threshold of imputation quality, default is 0.1.
 #   Variants with r2<r2_threshold will be excluded from output
@@ -14,17 +17,19 @@
 #   Valid values: 'first', 'weighted_average', 'mean'
 def process_args(args):
     # For sanity check. Only flags with names in this list are allowed
-    lst_flag_names = ['--input', '--output', '--verbose', '--r2_threshold', '--r2_output']
+    lst_flag_names = ['--input', '--output', '--verbose',
+                      '--missing', '--r2_threshold', '--r2_output']
+    # Save flags and flag values in a dictionary
+    dict_flags = {'--input':None, '--output':'merged', '--verbose':'true',
+                  '--missing':0, '--r2_threshold':0.1, '--r2_output':'first'}
 
-    flag_name = '' # Flag name, such as --input. Initialize with empty string
-    flag_val = '' # Flag value, such as chr1.vcf.gz. Initialize with empty string
+    # flag_name = '' # Flag name, such as --input. Initialize with empty string
+    # flag_val = '' # Flag value, such as chr1.vcf.gz. Initialize with empty string
     lst_flag_vals = [] # A list to store multiple values of --input flag
     if len(args) == 1:  # if no flags provided
         print('Error: No parameters provided, please see --help')
         raise IOError('No parameters provided')
     else:
-        dict_flags = dict() # To save flags and flag values
-        flag_name = ''
         i = 1 # Skip the first argument
         while i<len(args):
             # The first argument should be a flag (ie. --xxx)
@@ -73,6 +78,8 @@ def process_args(args):
                         for k, v in dict_flags.items(): print('\t' + k, v)
                         print('Error: Duplicated flag: '+flag_name)
                         raise IOError('Flag already exists: '+flag_name)
+        # Deal with --output
+        if dict_flags.get('--output') is None: dict_flags['--output']='merged'
 
         # Deal with verbose
         if dict_flags.get('--verbose') is None: dict_flags['--verbose']='true'

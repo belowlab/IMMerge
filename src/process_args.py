@@ -20,8 +20,7 @@ def process_args(args):
     lst_flag_names = ['--input', '--output', '--verbose',
                       '--missing', '--r2_threshold', '--r2_output']
     # Save flags and flag values in a dictionary
-    dict_flags = {'--input':None, '--output':'merged', '--verbose':'true',
-                  '--missing':0, '--r2_threshold':0.1, '--r2_output':'first'}
+    dict_flags = dict()
 
     # flag_name = '' # Flag name, such as --input. Initialize with empty string
     # flag_val = '' # Flag value, such as chr1.vcf.gz. Initialize with empty string
@@ -78,15 +77,22 @@ def process_args(args):
                         for k, v in dict_flags.items(): print('\t' + k, v)
                         print('Error: Duplicated flag: '+flag_name)
                         raise IOError('Flag already exists: '+flag_name)
-        # Deal with --output
+
+        # Check --input
+        if dict_flags.get('--input') is None:
+            print('Error: Missing input files')
+            raise IOError('Required flag missing: --input')
+
+
+        # Check --output
         if dict_flags.get('--output') is None: dict_flags['--output']='merged'
 
-        # Deal with verbose
+        # Check verbose
         if dict_flags.get('--verbose') is None: dict_flags['--verbose']='true'
         elif dict_flags['--verbose'] in ['true', 'True', '1']: dict_flags['--verbose']='true'
         else: dict_flags['--verbose'] = 'false'
 
-        # Deal with --r2_threshold (default is 0.1)
+        # Check --r2_threshold (default is 0.1)
         if dict_flags.get('--r2_threshold') is None: dict_flags['--r2_threshold']=0.1
         else:
             try:

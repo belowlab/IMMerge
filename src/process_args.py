@@ -9,16 +9,20 @@
 # --missing: (optional)
 #   Defines number of missing values allowed for each variant.
 #   Default is 0. Cannot exceed total number of input files.
+# --na_rep: (optional)
+#   Defines what symbol to use for missing values. Default is 'NA'
+#   This flag will be ignored if --missing is 0.
 # --r2_threshold: (Optional)
 #   Filtering threshold of imputation quality, default is 0.1.
 #   Variants with r2<r2_threshold will be excluded from output
 # --r2_output: (Optional)
 #   Defines how r2 is calculated in the output. Default is 'first'.
 #   Valid values: 'first', 'weighted_average', 'mean'
+#   If use 'first', --missing must be set to 0
 def process_args(args):
     # For sanity check. Only flags with names in this list are allowed
-    lst_flag_names = ['--input', '--output', '--verbose',
-                      '--missing', '--r2_threshold', '--r2_output']
+    lst_flag_names = ['--input', '--output', '--verbose', '--missing',
+                      '--na_rep', '--r2_threshold', '--r2_output', '--help']
     # Save flags and flag values in a dictionary
     dict_flags = dict()
 
@@ -26,8 +30,8 @@ def process_args(args):
     # flag_val = '' # Flag value, such as chr1.vcf.gz. Initialize with empty string
     lst_flag_vals = [] # A list to store multiple values of --input flag
     if len(args) == 1:  # if no flags provided
-        print('Error: No parameters provided, please see --help')
-        raise IOError('No parameters provided')
+        print('Error: No parameters provided, please see --help\nExit')
+        exit()
     else:
         i = 1 # Skip the first argument
         while i<len(args):
@@ -36,7 +40,9 @@ def process_args(args):
                 for k, v in dict_flags.items(): print('\t' + k, v)
                 raise IOError('Wrong value passed: ' + args[i])
             else: # If not the first one
-                if args[i]=='--input': # --input may have multiple values
+                if args[i] == '--help': # Print out help info, ignore other parameters (if provided)
+                    import print_help
+                elif args[i]=='--input': # --input may have multiple values
                     flag_name = args[i]
                     i = i+1
                     while i<len(args) and args[i][0:2]!='--': # Collect everything does not start with '--'
@@ -56,7 +62,6 @@ def process_args(args):
                         for k, v in dict_flags.items(): print('\t' + k, v)
                         print('Error: Duplicated flag: '+flag_name)
                         raise IOError('Flag already exist: '+flag_name)
-
                 else: # If not --input flag
                     if args[i][0:2] == '--':
                         flag_name = args[i]
@@ -83,14 +88,31 @@ def process_args(args):
             print('Error: Missing input files')
             raise IOError('Required flag missing: --input')
 
-
         # Check --output
         if dict_flags.get('--output') is None: dict_flags['--output']='merged'
 
-        # Check verbose
+        # Check --verbose
         if dict_flags.get('--verbose') is None: dict_flags['--verbose']='true'
         elif dict_flags['--verbose'] in ['true', 'True', '1']: dict_flags['--verbose']='true'
         else: dict_flags['--verbose'] = 'false'
+
+        # Check --missing
+        if dict_flags.get('--missing') is None: dict_flags['--missing'] = 0
+        else:
+            try:
+                dict_flags['--missing'] = int(dict_flags['--missing'])
+            except:
+                print('Error: Invalid value of --missing:', dict_flags['--missing'])
+                print('\tValue of --missing should be numeric')
+                raise IOError('Invalid value of --missing')
+
+            if dict_flags['--missing'] < 0 or dict_flags['--missing'] > len(dict_flags['--input']):
+                print('Error: Invalid value of --missing:', dict_flags['--missing'])
+                print('\tValue of --missing should be between 0 and number of input files')
+                raise IOError('Invalid value of --missing')
+
+        # Check --na_rep (default is NA)
+        if dict_flags.get('--na_rep') is None: dict_flags['--na_rep'] = 'NA'
 
         # Check --r2_threshold (default is 0.1)
         if dict_flags.get('--r2_threshold') is None: dict_flags['--r2_threshold']=0.1
@@ -107,7 +129,7 @@ def process_args(args):
                 print('\tValue of --r2_threshold should be numeric between 0 and 1')
                 raise IOError('Invalid value of --r2_threshold')
 
-        # Deal with --r2_output
+        # Check --r2_output
         if dict_flags.get('--r2_output') is None: dict_flags['--r2_output']='first'
         else:
             if dict_flags['--r2_output'] not in ['first', 'weighted_average', 'mean']:
@@ -122,6 +144,9 @@ def process_args(args):
                 print('Error: Unrecognized flag: '+k)
                 print('Only these flags are allowed:', lst_flag_names)
                 raise IOError('Invalid flag: ' + flag_name)
-            else: print('\t'+k, v)
+            else:
+                if k=='--na_rep' and dict_flags['--missing']==0:
+                    print('\t' + k, v, '(ignored since --missing is 0)')
+                else: print('\t'+k, v)
         return dict_flags
 

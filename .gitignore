@@ -1,4 +1,6 @@
 DS_Store
+variants_excluded.txt
+variants_kept.txt
 sample_data/
 
 

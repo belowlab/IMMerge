@@ -1,7 +1,7 @@
+# Step 00 (optional, set to default in this version)
 # This code is to check what r2 setting was applied for TOPMed imputation
 # This may not be necessary if merging allows missing values
 # Only need to run once
-
 import gzip
 import sys
 from process_args import process_args
@@ -20,7 +20,9 @@ if dict_flags['--verbose']!='true': verbose=False
 # ----------------------- Helper functions -----------------------
 # This function check imputation setting info based on header lines of input .dose.vcf.gz files
 # Parameter: fn: input file name
-# Output: print imputation settings of each input file to console
+# Output:
+# - Print imputation settings of each input file to console
+# - Processed arguments are returned in dict_flags
 def check_imputatilson_parameters(lst_fn=dict_flags['--input']):
     print('\nCheck r2 filter used for imputation:')
     try:
@@ -31,11 +33,12 @@ def check_imputatilson_parameters(lst_fn=dict_flags['--input']):
             # Header lines start with '##'
             while line[0:2]=='##':
                 if line[0:4]=='##r2':
-                    print('\t', fn.split('/')[-1]+':', line.strip()[2:])
+                    print('\t'+fn.split('/')[-1]+':', line.strip()[2:])
                 line = fh.readline()
             fh.close()
+        return dict_flags
     except:
-        print('Error: File not found:', fn)
+        print('Error: File not found:', fn, '\n')
         raise IOError('Input file not found')
 
-check_imputatilson_parameters()
+# check_imputatilson_parameters()

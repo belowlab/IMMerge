@@ -9,6 +9,7 @@
 # --missing: (optional)
 #   Defines number of missing values allowed for each variant.
 #   Default is 0. Cannot exceed total number of input files.
+#   If --missing is 0, only variants shared by all input files will be saved in merged result
 # --na_rep: (optional)
 #   Defines what symbol to use for missing values. Default is 'NA'
 #   This flag will be ignored if --missing is 0.
@@ -60,7 +61,7 @@ def process_args(args):
                         dict_flags[flag_name] = lst_flag_vals
                     else:
                         for k, v in dict_flags.items(): print('\t' + k, v)
-                        print('Error: Duplicated flag: '+flag_name)
+                        print('Error: Duplicated flag: '+flag_name, '\n')
                         raise IOError('Flag already exist: '+flag_name)
                 else: # If not --input flag
                     if args[i][0:2] == '--':
@@ -80,12 +81,12 @@ def process_args(args):
                         dict_flags[flag_name] = flag_val
                     else:
                         for k, v in dict_flags.items(): print('\t' + k, v)
-                        print('Error: Duplicated flag: '+flag_name)
+                        print('Error: Duplicated flag: '+flag_name, '\n')
                         raise IOError('Flag already exists: '+flag_name)
 
         # Check --input
         if dict_flags.get('--input') is None:
-            print('Error: Missing input files')
+            print('Error: Missing input files\n')
             raise IOError('Required flag missing: --input')
 
         # Check --output
@@ -103,12 +104,12 @@ def process_args(args):
                 dict_flags['--missing'] = int(dict_flags['--missing'])
             except:
                 print('Error: Invalid value of --missing:', dict_flags['--missing'])
-                print('\tValue of --missing should be numeric')
+                print('\tValue of --missing should be numeric\n')
                 raise IOError('Invalid value of --missing')
 
             if dict_flags['--missing'] < 0 or dict_flags['--missing'] > len(dict_flags['--input']):
                 print('Error: Invalid value of --missing:', dict_flags['--missing'])
-                print('\tValue of --missing should be between 0 and number of input files')
+                print('\tValue of --missing should be between 0 and number of input files\n')
                 raise IOError('Invalid value of --missing')
 
         # Check --na_rep (default is NA)
@@ -121,12 +122,12 @@ def process_args(args):
                 dict_flags['--r2_threshold'] = float(dict_flags['--r2_threshold'])
             except:
                 print('Error: Invalid value of --r2_threshold:', dict_flags['--r2_threshold'])
-                print('\tValue of --r2_threshold should be numeric and between 0 and 1')
+                print('\tValue of --r2_threshold should be numeric and between 0 and 1\n')
                 raise IOError('Invalid value of --r2_threshold')
 
             if dict_flags['--r2_threshold'] < 0 or dict_flags['--r2_threshold'] > 1:
                 print('Error: Invalid value of --r2_threshold:', dict_flags['--r2_threshold'])
-                print('\tValue of --r2_threshold should be numeric between 0 and 1')
+                print('\tValue of --r2_threshold should be numeric between 0 and 1\n')
                 raise IOError('Invalid value of --r2_threshold')
 
         # Check --r2_output
@@ -134,7 +135,7 @@ def process_args(args):
         else:
             if dict_flags['--r2_output'] not in ['first', 'weighted_average', 'mean']:
                 print('Error: Invalid value of --r2_output:', dict_flags['--r2_output'])
-                print('Value of --r2_output should be: first, weighted_average or mean')
+                print('Value of --r2_output should be: first, weighted_average or mean\n')
                 raise IOError('Invalid value of --r2_output')
 
         # If no error raised up to here, print flags and values used
@@ -142,11 +143,14 @@ def process_args(args):
         for k, v in dict_flags.items():
             if k not in lst_flag_names:
                 print('Error: Unrecognized flag: '+k)
-                print('Only these flags are allowed:', lst_flag_names)
+                print('Only these flags are allowed:', lst_flag_names, '\n')
                 raise IOError('Invalid flag: ' + flag_name)
             else:
                 if k=='--na_rep' and dict_flags['--missing']==0:
                     print('\t' + k, v, '(ignored since --missing is 0)')
+                elif k=='--input' and len(dict_flags['--input'])<2:
+                    print('Error: At least two files are needed for --input:', dict_flags['--input'])
+                    raise IOError('Missing --input files')
                 else: print('\t'+k, v)
         return dict_flags
 

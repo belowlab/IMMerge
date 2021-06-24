@@ -3,27 +3,13 @@
 # This may not be necessary if merging allows missing values
 # Only need to run once
 import gzip
-import sys
-from process_args import process_args
 
-# File name can be passed to this code in terminal, or use import this code as in a script (need to modify a little)
-args = sys.argv
-verbose=True
-
-# Process terminal input
-# dict_flags contains values for below flags:
-#   --input, --output, --verbose, --missing, --r2_threshold, --r2_output
-dict_flags = process_args(args) # Process terminal input
-
-if dict_flags['--verbose']!='true': verbose=False
-
-# ----------------------- Helper functions -----------------------
 # This function check imputation setting info based on header lines of input .dose.vcf.gz files
-# Parameter: fn: input file name
+# Parameter: fn: input file name (stored in dict_flags['--input'])
 # Output:
 # - Print imputation settings of each input file to console
 # - Processed arguments are returned in dict_flags
-def check_imputatilson_parameters(lst_fn=dict_flags['--input']):
+def check_imputatilson_parameters(lst_fn):
     print('\nCheck r2 filter used for imputation:')
     try:
         # Read in file headers of each input file
@@ -36,7 +22,7 @@ def check_imputatilson_parameters(lst_fn=dict_flags['--input']):
                     print('\t'+fn.split('/')[-1]+':', line.strip()[2:])
                 line = fh.readline()
             fh.close()
-        return dict_flags
+        # return dict_flags
     except:
         print('Error: File not found:', fn, '\n')
         raise IOError('Input file not found')

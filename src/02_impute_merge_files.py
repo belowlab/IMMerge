@@ -1,48 +1,57 @@
-# This code is used to merge imputed files from TopMed
-# (From Hannah:)
-# The goal is to combine our three post-imputation vcf.gz files
-# (with around 25,000 samples in each and ~38M variants)
-# into one vcf.gz file separated by chromosome
-# File dir is: /data100t1/share/BioVU/TOPMed_imputation_072020 (Confirm with Hannah)
+# This code is used to merge imputed files from TopMed based on list of saved variants in prior steps
+# The goal is to combine post-imputation vcf.gz files into one vcf.gz file
+
+
+
+print('\nVersion 1.0')
 
 import gzip
+import sys
+from process_args import process_args
+import get_SNP_list
+import check_r2_setting_for_imputation
+
+# File name can be passed to this code in terminal, or use import this code as in a script (need to modify a little)
+args = sys.argv
+verbose=True
+# Process terminal input
+# dict_flags contains values for below flags:
+#   --input, --output, --verbose, --missing, --r2_threshold, --r2_output
+dict_flags = process_args(args) # Process terminal input
+if dict_flags['--verbose']!='true': verbose=False
+
+check_r2_setting_for_imputation.check_imputatilson_parameters(lst_fn=dict_flags['--input'])
+get_SNP_list.get_snp_list(dict_flags)
+
 
 # ----------------------- Helper functions -----------------------
 
-# This function reads in a file with one snp in each line,
+# This function reads in a file with one snp in each line (ie. variants_kept.txt),
 # then return a list of all SNPs.
-# For this version, the first header line 'SNP' need to be skipped
-def get_snp_lst(snp_fn):
+# The first line needs to be skipped (header line)
+def get_snp_lst(variants_kept_fn='variants_kept.txt'):
     lst_snp = []
-    with open(snp_fn, 'r') as fh:
+    with open(variants_kept_fn, 'r') as fh:
         line = fh.readline()  # Skip the header line
         line = fh.readline().strip()
         while line != '':
-            lst_snp.append(line)
+            lst_snp.append(line.split()[0])
             line = fh.readline().strip()
     return lst_snp
 
-
-# Merge 3 imputed files together
-def merge_files(chromosome='chr1',
-                input_dir='/data100t1/share/BioVU/TOPMed_imputation_072020/',
-                snp_to_keep_dir='/data100t1/home/wanying/imputation/snp_keep_or_exclude_list/',
-                output_dir='/data100t1/home/wanying/imputation/merged_gz_files/'):
-    print('Start merging files of '+chromosome+':')
-    lst_fn = [chromosome + '_group1.dose.vcf.gz',
-              chromosome + '_group2.dose.vcf.gz',
-              chromosome + '_group3.dose.vcf.gz']
-    snp_keep_fn = chromosome + '_merge_keep_snps.txt'
-
-    output_fn = chromosome + '_merged.dose.vcf.gz'
+# Merge input files together
+def merge_files():
+    print('\nStart merging files of:')
+    lst_fn = dict_flags['--input']
+    output_fn = dict_flags['--output'] + '.dose.vcf.gz'
 
     # Read in SNPs need to be kept from file
-    lst_snp_to_keep = get_snp_lst(snp_to_keep_dir + snp_keep_fn)
+    lst_snp_to_keep = get_snp_lst()
 
     fh_group1 = gzip.open(input_dir + lst_fn[0], 'rt')
     fh_group2 = gzip.open(input_dir + lst_fn[1], 'rt')
     fh_group3 = gzip.open(input_dir + lst_fn[2], 'rt')
-    fh_output = gzip.open(output_dir + output_fn, 'wt')  # Open for writing (appending)
+    fh_output = gzip.open(output_fn, 'wt')  # Open for writing (appending)
 
     # Skip the first 18 lines (header lines of imputation info).
     # Real data starts from line 19, but need to write the header lines into merged file once
@@ -130,12 +139,6 @@ def merge_files(chromosome='chr1',
     print('\n------------------------------------\nDone')
 
 # ----------------------- End of helper functions -----------------------
-#
-# chr_number_list = ['1','2','3','4','5','6','7','13','14','15','16','17','18','19','20','22','X']
-#
-# for i in chr_number_list:
-#     check_imputation_parameters(chromosome='chr'+i)
 
 
 
-merge_files(chromosome='chr5')

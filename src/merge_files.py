@@ -1,13 +1,13 @@
+# Step 02
 # This code is used to merge imputed files from TopMed based on list of saved variants in prior steps
 # The goal is to combine post-imputation vcf.gz files into one vcf.gz file
 
-
-
 print('\nVersion 1.0')
 
+import pandas as pd
 import gzip
 import sys
-from process_args import process_args
+import process_args
 import get_SNP_list
 import check_r2_setting_for_imputation
 
@@ -17,7 +17,7 @@ verbose=True
 # Process terminal input
 # dict_flags contains values for below flags:
 #   --input, --output, --verbose, --missing, --r2_threshold, --r2_output
-dict_flags = process_args(args) # Process terminal input
+dict_flags = process_args.process_args(args) # Process terminal input
 if dict_flags['--verbose']!='true': verbose=False
 
 check_r2_setting_for_imputation.check_imputatilson_parameters(lst_fn=dict_flags['--input'])
@@ -25,12 +25,21 @@ get_SNP_list.get_snp_list(dict_flags)
 
 
 # ----------------------- Helper functions -----------------------
+# This function check input files and get (return) number of individuals of each file
+# Only need to use this function to calculate weighted r2 (when --r2_output is 'weighted_average')
+def get_number_of_individuals():
+    pass
+
 
 # This function reads in a file with one snp in each line (ie. variants_kept.txt),
-# then return a list of all SNPs.
+# then return a list of all SNPs, and r2 based on '--r2_output'
 # The first line needs to be skipped (header line)
-def get_snp_lst(variants_kept_fn='variants_kept.txt'):
+def get_snp_and_r2_lst(variants_kept_fn='variants_kept.txt'):
+    df_snps = pd.read_csv(variants_kept_fn, sep='\t')
     lst_snp = []
+    print(df_snps.head())
+    print(df_snps.shape)
+'''    
     with open(variants_kept_fn, 'r') as fh:
         line = fh.readline()  # Skip the header line
         line = fh.readline().strip()
@@ -39,20 +48,56 @@ def get_snp_lst(variants_kept_fn='variants_kept.txt'):
             line = fh.readline().strip()
     return lst_snp
 
+'''
 # Merge input files together
 def merge_files():
-    print('\nStart merging files of:')
+    print('\nStart merging files:')
+    number_of_dup_id = dict_flags['--duplicate_id'] # User provided number of duplicated IDs in each sub input file
     lst_fn = dict_flags['--input']
     output_fn = dict_flags['--output'] + '.dose.vcf.gz'
-
-    # Read in SNPs need to be kept from file
-    lst_snp_to_keep = get_snp_lst()
-
-    fh_group1 = gzip.open(input_dir + lst_fn[0], 'rt')
-    fh_group2 = gzip.open(input_dir + lst_fn[1], 'rt')
-    fh_group3 = gzip.open(input_dir + lst_fn[2], 'rt')
     fh_output = gzip.open(output_fn, 'wt')  # Open for writing (appending)
 
+    lst_fh = []  # A list to store file handle
+    for fn in lst_fn: lst_fh.append(gzip.open(fn, 'rt'))
+
+    # Read in SNPs need to be kept from file, calculate r2
+    lst_snp_to_keep, lst_r2 = get_snp_and_r2_lst()
+
+    # Read trough header lines (line start with ##) and write into output file
+    # Process ll files at the same time. All input files should have the same number of header lines
+    for fh in lst_fh:
+        line = fh.readline().strip()
+        print(1, line[:80])
+    fh_output.write(line)
+    for fh in lst_fh:
+        line = fh.readline().strip()
+        print(2, line[:80])
+    while line[:2] == '##':
+        fh_output.write('\n'+line)
+        for fh in lst_fh:
+            line = fh.readline().strip()
+            print(3, line[:80])
+
+    # Once reach here, now line is the line of column names (start with single '#')
+    # In current TOPMed version these are columns of shared information:
+    #   - CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT
+    inx = line.split().index('FORMAT')  # Find from which column genotype data starts
+    print('\tIndividual genotype data starts from column #:', inx+1)
+
+
+    # Continue reading and start merging lines
+
+
+
+
+
+    # Close all file handles when done
+    for fh in lst_fh: fh.close()
+    fh_output.close()
+
+get_snp_and_r2_lst()
+
+'''
     # Skip the first 18 lines (header lines of imputation info).
     # Real data starts from line 19, but need to write the header lines into merged file once
     for i in range(18):
@@ -137,7 +182,7 @@ def merge_files():
 
     print('\n' + chromosome + ':', count, 'SNPs have been merged')
     print('\n------------------------------------\nDone')
-
+'''
 # ----------------------- End of helper functions -----------------------
 
 

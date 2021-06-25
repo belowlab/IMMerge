@@ -6,7 +6,7 @@
 # --verbose: (Optional)
 #   If print out detailed information, default is true
 #   valid values: [true/True/1, false/False/not 1]
-# --missing: (optional)
+# --missing: (optional, int)
 #   Defines number of missing values allowed for each variant.
 #   Default is 0. Cannot exceed total number of input files.
 #   If --missing is 0, only variants shared by all input files will be saved in merged result
@@ -14,16 +14,20 @@
 #   Defines what symbol to use for missing values. Default is 'NA'
 #   This flag will be ignored if --missing is 0.
 # --r2_threshold: (Optional)
-#   Filtering threshold of imputation quality, default is 0.1.
+#   Filtering threshold of imputation quality, default is 0 (no filtering).
 #   Variants with r2<r2_threshold will be excluded from output
 # --r2_output: (Optional)
 #   Defines how r2 is calculated in the output. Default is 'first'.
 #   Valid values: 'first', 'weighted_average', 'mean'
 #   If use 'first', --missing must be set to 0
+# --duplicate_id: (optional, int)
+#   Default is 0. Defines number of duplicated individuals in each input file.
+#   Duplicated IDs should be the first N columns in each file and not mixed with unique IDs.
+#   Starting from the second input file, data of the first N individuals will be skipped in the merged output
 def process_args(args):
     # For sanity check. Only flags with names in this list are allowed
-    lst_flag_names = ['--input', '--output', '--verbose', '--missing',
-                      '--na_rep', '--r2_threshold', '--r2_output', '--help']
+    lst_flag_names = ['--input', '--output', '--verbose', '--missing', '--na_rep',
+                      '--r2_threshold', '--r2_output', '--duplicate_id', '--help']
     # Save flags and flag values in a dictionary
     dict_flags = dict()
 
@@ -104,19 +108,18 @@ def process_args(args):
                 dict_flags['--missing'] = int(dict_flags['--missing'])
             except:
                 print('Error: Invalid value of --missing:', dict_flags['--missing'])
-                print('\tValue of --missing should be numeric\n')
+                print('\tValue of --missing should be an integer\n')
                 raise IOError('Invalid value of --missing')
-
             if dict_flags['--missing'] < 0 or dict_flags['--missing'] > len(dict_flags['--input']):
                 print('Error: Invalid value of --missing:', dict_flags['--missing'])
-                print('\tValue of --missing should be between 0 and number of input files\n')
+                print('\tValue of --missing should be an integer between 0 and number of input files\n')
                 raise IOError('Invalid value of --missing')
 
         # Check --na_rep (default is NA)
         if dict_flags.get('--na_rep') is None: dict_flags['--na_rep'] = 'NA'
 
         # Check --r2_threshold (default is 0.1)
-        if dict_flags.get('--r2_threshold') is None: dict_flags['--r2_threshold']=0.1
+        if dict_flags.get('--r2_threshold') is None: dict_flags['--r2_threshold'] = 0
         else:
             try:
                 dict_flags['--r2_threshold'] = float(dict_flags['--r2_threshold'])
@@ -138,13 +141,27 @@ def process_args(args):
                 print('Value of --r2_output should be: first, weighted_average or mean\n')
                 raise IOError('Invalid value of --r2_output')
 
+        # Check --duplicate_id
+        if dict_flags.get('--duplicate_id') is None: dict_flags['--duplicate_id'] = 0
+        else:
+            try:
+                dict_flags['--duplicate_id'] = int(dict_flags['--duplicate_id'])
+            except:
+                print('Error: Invalid value of --duplicate_id:', dict_flags['--duplicate_id'])
+                print('\tValue of --duplicate_id should be ann integer\n')
+                raise IOError('Invalid value of --duplicate_id')
+            if dict_flags['--duplicate_id'] < 0:
+                print('Error: Invalid value of --duplicate_id:', dict_flags['--duplicate_id'])
+                print('\tValue of --duplicate_id should be an integer between 0 and number of individuals\n')
+                raise IOError('Invalid value of --duplicate_id')
+
         # If no error raised up to here, print flags and values used
         print('\nInput options used:')
         for k, v in dict_flags.items():
             if k not in lst_flag_names:
                 print('Error: Unrecognized flag: '+k)
                 print('Only these flags are allowed:', lst_flag_names, '\n')
-                raise IOError('Invalid flag: ' + flag_name)
+                raise IOError('Invalid flag: ' + k)
             else:
                 if k=='--na_rep' and dict_flags['--missing']==0:
                     print('\t' + k, v, '(ignored since --missing is 0)')

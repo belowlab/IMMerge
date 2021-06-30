@@ -39,10 +39,10 @@ def __get_lst_info_df(dict_flags):
 # Parameters:
 # - lst_info_df: a list containing names of .info.gz files
 # - cols_to_keep: a list of columns to be saved in the output file.
-#                 In this version use ['SNP', 'REF(0)', 'ALT(1)', 'Genotyped', 'MAF', 'Rsq']
-# Return: a Dataframe with all variants and columns REF(0), ALT(1), Genotyped, MAF and Rsq
+#                 In this version use ['SNP', 'REF(0)', 'ALT(1)', 'Genotyped','ALT_Frq', 'MAF', 'Rsq']
+# Return: a Dataframe with all variants and columns REF(0), ALT(1), Genotyped, ALT_Frq, MAF and Rsq
 # - For duplicated fields MAF and Rsq, column are renamed as MAF_group1, Rsq_group1, etc
-def __merge_snps(lst_info_df, cols_to_keep=['SNP', 'REF(0)', 'ALT(1)', 'Genotyped', 'MAF', 'Rsq']):
+def __merge_snps(lst_info_df, cols_to_keep=['SNP', 'REF(0)', 'ALT(1)', 'Genotyped', 'ALT_Frq', 'MAF', 'Rsq']):
     # REF(0), ALT(1), Genotyped should be the same for all files,
     # so only keep then in the first dataframe to merge
     cols_to_keep_v2 = cols_to_keep.copy()
@@ -59,7 +59,7 @@ def __merge_snps(lst_info_df, cols_to_keep=['SNP', 'REF(0)', 'ALT(1)', 'Genotype
             i = i+2
         else:
             # Rename columns of df with correct suffix (ie. _groupX)
-            df_merged = df_merged.merge(lst_info_df[i][cols_to_keep_v2].rename(columns={'MAF':'MAF_group'+str(i+1), 'Rsq':'Rsq_group'+str(i+1)}),
+            df_merged = df_merged.merge(lst_info_df[i][cols_to_keep_v2].rename(columns={'MAF':'MAF_group'+str(i+1), 'Rsq':'Rsq_group'+str(i+1), 'ALT_Frq':'ALT_Frq_group'+str(i+1)}),
                                       how='outer', left_on='SNP',
                                       right_on='SNP')
             i+=1
@@ -71,8 +71,9 @@ def __merge_snps(lst_info_df, cols_to_keep=['SNP', 'REF(0)', 'ALT(1)', 'Genotype
 # - df_merged: merged dataframe from all .info.gz files
 # - col_name_r2_combined: column name of combined r2
 # - col_name_maf_combined: column name of combined minor allele frequency
+# - col_name_alt_frq: column name of combined alternative allele frequency (ALT_Frq)
 # - lst_input_fn: a list of names of input files
-def __calculate_weighted_r2_maf(df_merged, col_name_r2_combined, col_name_maf_combined, lst_input_fn):
+def __calculate_weighted_r2_maf_altFrq(df_merged, col_name_r2_combined, col_name_maf_combined, col_name_alt_frq_combined, lst_input_fn):
     lst_number_of_individuals = []  # A list to store number of individuals of each input file
     # Count number of individuals in each input file
     for fn in lst_input_fn:
@@ -89,6 +90,7 @@ def __calculate_weighted_r2_maf(df_merged, col_name_r2_combined, col_name_maf_co
     # r2_combined = sum(r2_groupX * number_of_individuals_groupX) / sum(number_of_individuals_groupX)
     lst_col_names_r2_adj = []   # A list to store column names of r2 * weight
     lst_col_names_maf_adj = []  # For MAF, similar to lst_col_names_r2_adj
+    lst_col_names_alt_frq_adj = [] # For ALT_Frq, same calculation as MAF
 
     # A list to store column names of r2 * weight/r2
     # In this way weight can be adjusted to reflect missing values in r2
@@ -97,25 +99,31 @@ def __calculate_weighted_r2_maf(df_merged, col_name_r2_combined, col_name_maf_co
     for i in range(len(lst_input_fn)):
         col_name_r2 = 'Rsq_group'+str(i+1)
         col_name_maf = 'MAF_group' + str(i + 1)
+        col_name_alt_frq = 'ALT_Frq_group'+str(i+1)
+
         # !!! Must use pd.DataFrame.sum(), mean(), etc. functions to deal with missing values (NaN)
         # Otherwise will get NaN if adding NaN to another value directly.
         df_merged[col_name_r2+'_adj'] = df_merged[col_name_r2] * lst_number_of_individuals[i] # Rsq * # individuals
         df_merged[col_name_maf+'_adj'] = df_merged[col_name_maf] * lst_number_of_individuals[i]   # MAF * # individuals
-        # Weight is # of individuals
+        df_merged[col_name_alt_frq + '_adj'] = df_merged[col_name_alt_frq] * lst_number_of_individuals[i]  # MAF * # individuals
+        # Weight is number of individuals
         df_merged[col_name_r2 + '_weight_adj'] = lst_number_of_individuals[i] * df_merged[col_name_r2]/ df_merged[col_name_r2]
         lst_col_names_r2_adj.append(col_name_r2+'_adj')
         lst_col_names_maf_adj.append(col_name_maf + '_adj')
+        lst_col_names_alt_frq_adj.append(col_name_alt_frq + '_adj')
         lst_col_names_weight_adj.append(col_name_r2 + '_weight_adj')
 
+    df_merged[col_name_alt_frq_combined] = df_merged[lst_col_names_alt_frq_adj].sum(axis=1) / sum(lst_number_of_individuals)
     df_merged[col_name_maf_combined] = df_merged[lst_col_names_maf_adj].sum(axis=1) / sum(lst_number_of_individuals)
     df_merged[col_name_r2_combined] = df_merged[lst_col_names_r2_adj].sum(axis=1) / df_merged[lst_col_names_weight_adj].sum(axis=1)
 
     # Drop columns that are not needed in output
     df_merged.drop(labels=lst_col_names_r2_adj, axis=1, inplace=True)
     df_merged.drop(labels=lst_col_names_maf_adj, axis=1, inplace=True)
+    df_merged.drop(labels=lst_col_names_alt_frq_adj, axis=1, inplace=True)
     df_merged.drop(labels=lst_col_names_weight_adj, axis=1, inplace=True)
 
-    return lst_number_of_individuals
+    return lst_number_of_individuals    # Return number of individuals in each file
 # ----------------- End of helper functions -----------------
 
 # This function save excluded and kept variants into .txt files
@@ -137,9 +145,11 @@ def __process_output(df_merged, dict_flags):
     for i in range(len(dict_flags['--input'])):
         col_name_r2 = 'Rsq_group' + str(i + 1)
         col_name_maf = 'MAF_group' + str(i + 1)
-        # Convert values of r2 and MAF column from strings to numbers for later calculations
+        col_name_alt_frq = 'ALT_Frq_group' + str(i + 1) # Column name of alternative allele
+        # Convert values of r2, MAF and ALT_Frq columns from strings to numbers for later calculations
         df_merged[col_name_r2] = pd.to_numeric(df_merged[col_name_r2], errors='coerce')
         df_merged[col_name_maf] = pd.to_numeric(df_merged[col_name_maf], errors='coerce')
+        df_merged[col_name_alt_frq] = pd.to_numeric(df_merged[col_name_alt_frq], errors='coerce')
 
         if missing == 0:  # Only save variants shared by all input files
             # Check columns of Rsq (MAF also works) such as: Rsq_group1, Rsq_group2,...
@@ -162,11 +172,13 @@ def __process_output(df_merged, dict_flags):
     lst_number_of_individuals = []  # Print this info if '--r2_output' is 'weighted_average':
     col_name_r2_combined = 'Rsq_combined'
     col_name_maf_combined = 'MAF_combined'
+    col_name_alt_frq_combined = 'ALT_Frq_combined'
     if dict_flags['--r2_output'] == 'first':  # use r2 of the first input file
         df_merged[col_name_r2_combined] = df_merged['Rsq_group1']
     elif dict_flags['--r2_output'] == 'weighted_average':
-        lst_number_of_individuals = __calculate_weighted_r2_maf(df_merged, col_name_r2_combined,
-                                                                col_name_maf_combined, dict_flags['--input'])
+        lst_number_of_individuals = __calculate_weighted_r2_maf_altFrq(df_merged, col_name_r2_combined,
+                                                                       col_name_maf_combined, col_name_alt_frq_combined,
+                                                                       dict_flags['--input'])
     else:  # Mean
         df_merged[col_name_r2_combined] = df_merged[lst_col_names].mean(axis=1)
 
@@ -196,3 +208,4 @@ def get_snp_list(dict_flags):
     print('\nNumber of variants:')
     print('\tTotal number from all input files:', df_merged.shape[0])
     __process_output(df_merged, dict_flags)
+

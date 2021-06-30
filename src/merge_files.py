@@ -10,6 +10,9 @@ import sys
 import process_args
 import get_SNP_list
 import check_r2_setting_for_imputation
+import time
+
+start_time = time.time()    # Track execution time
 
 # File name can be passed to this code in terminal, or use import this code as in a script (need to modify a little)
 args = sys.argv
@@ -25,56 +28,55 @@ get_SNP_list.get_snp_list(dict_flags)
 
 
 # ----------------------- Helper functions -----------------------
-# This function check input files and get (return) number of individuals of each file
-# Only need to use this function to calculate weighted r2 (when --r2_output is 'weighted_average')
-def get_number_of_individuals():
-    pass
-
 
 # This function reads in a file with one snp in each line (ie. variants_kept.txt),
 # then return a list of all SNPs, and r2 based on '--r2_output'
 # The first line needs to be skipped (header line)
 def get_snp_and_r2_lst(variants_kept_fn='variants_kept.txt'):
     df_snps = pd.read_csv(variants_kept_fn, sep='\t')
-    lst_snp = []
+    lst_snp = df_snps['SNP']
+    lst_maf = df_snps['MAF_combined']
+    lst_r2 = df_snps['Rsq_combined']
     print(df_snps.head())
     print(df_snps.shape)
-'''    
-    with open(variants_kept_fn, 'r') as fh:
-        line = fh.readline()  # Skip the header line
-        line = fh.readline().strip()
-        while line != '':
-            lst_snp.append(line.split()[0])
-            line = fh.readline().strip()
-    return lst_snp
 
-'''
+# # This function reads in input files, then returns a list of
+# def load_input_files():
+#         with open(variants_kept_fn, 'r') as fh:
+#             line = fh.readline()  # Skip the header line
+#             line = fh.readline().strip()
+#             while line != '':
+#                 lst_snp.append(line.split()[0])
+#                 line = fh.readline().strip()
+#         return lst_snp
+
+
 # Merge input files together
 def merge_files():
     print('\nStart merging files:')
     number_of_dup_id = dict_flags['--duplicate_id'] # User provided number of duplicated IDs in each sub input file
-    lst_fn = dict_flags['--input']
+    lst_input_fn = dict_flags['--input']
     output_fn = dict_flags['--output'] + '.dose.vcf.gz'
     fh_output = gzip.open(output_fn, 'wt')  # Open for writing (appending)
 
-    lst_fh = []  # A list to store file handle
-    for fn in lst_fn: lst_fh.append(gzip.open(fn, 'rt'))
+    lst_input_fh = []  # A list to store file handles of input files
+    for fn in lst_input_fn: lst_input_fh.append(gzip.open(fn, 'rt'))
 
-    # Read in SNPs need to be kept from file, calculate r2
+    # Read in SNPs (with corresponding combined MAF and r2 )need to be kept from file
     lst_snp_to_keep, lst_r2 = get_snp_and_r2_lst()
 
     # Read trough header lines (line start with ##) and write into output file
     # Process ll files at the same time. All input files should have the same number of header lines
-    for fh in lst_fh:
+    for fh in lst_input_fh:
         line = fh.readline().strip()
         print(1, line[:80])
     fh_output.write(line)
-    for fh in lst_fh:
+    for fh in lst_input_fh:
         line = fh.readline().strip()
         print(2, line[:80])
     while line[:2] == '##':
         fh_output.write('\n'+line)
-        for fh in lst_fh:
+        for fh in lst_input_fh:
             line = fh.readline().strip()
             print(3, line[:80])
 
@@ -92,10 +94,20 @@ def merge_files():
 
 
     # Close all file handles when done
-    for fh in lst_fh: fh.close()
+    for fh in lst_input_fh: fh.close()
     fh_output.close()
 
 get_snp_and_r2_lst()
+
+
+duration = time.time() - start_time
+hours = duration // 3600
+duration = duration % 3600
+minutes = duration // 60
+seconds = duration % 60
+print('\nDuration: {:.2f} hours, {:.2f} minutes, {:.2f} seconds'.format(hours, minutes, seconds))
+print('End of run')
+
 
 '''
     # Skip the first 18 lines (header lines of imputation info).

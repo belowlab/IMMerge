@@ -199,6 +199,7 @@ def __process_output(df_merged, dict_flags):
         print('\tNumber of excluded variants:', df_merged.drop(index=inx_to_keep).shape[0])
 
     print('\nNumbers of individuals in each input file:', lst_number_of_individuals)
+    return lst_number_of_individuals
 
 # A wrapper function to run this script
 # Returns dict_flags for next step
@@ -207,5 +208,6 @@ def get_snp_list(dict_flags):
     df_merged = __merge_snps(lst_info_df)
     print('\nNumber of variants:')
     print('\tTotal number from all input files:', df_merged.shape[0])
-    __process_output(df_merged, dict_flags)
+    lst_number_of_individuals = __process_output(df_merged, dict_flags)
+    return lst_number_of_individuals # This return value is used in the final merging step
 

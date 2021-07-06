@@ -89,7 +89,7 @@ def merge_files(dict_flags=dict_flags, lst_number_of_individuals=lst_number_of_i
                 line = fh.readline().strip()
                 # Set maxsplit in slit() function to remove duplicated IDs
                 line_to_write = line_to_write + '\t' + line.split(maxsplit=number_of_dup_id + inx_indiv_id_starts)[-1]
-            fh_output.write(line_to_write + '\n')
+            fh_output.write(line_to_write)
             break
 
         line = lst_input_fh[0].readline().strip()  # Read line of the first file to decide what to do
@@ -107,38 +107,54 @@ def merge_files(dict_flags=dict_flags, lst_number_of_individuals=lst_number_of_i
 
     while True:
         line_snp_kept = fh_snp_kept.readline().strip()
-        snp = line_snp_kept.split()[0]  # Get SNP ID for comparison
+        if line_snp_kept != '':
+            snp = line_snp_kept.split()[0]  # Get SNP ID for comparison
+        else: break # End of SNP to be kept, so stop here
 
         # line_to_write = '\n' + line # Output merged line
-        lst_snp_id = line.split(maxsplit=inx_snp_id_column+1)[inx_snp_id_column]
+        # lst_snp_id = line.split(maxsplit=inx_snp_id_column+1)[inx_snp_id_column]
         # Replace alt_frq, MAF and r2 in INFO column with averaged values
 
         inx_flag_col = 4 # Column index of AlT_frq_group1
         for i in range(len(lst_input_fh)): # check SNP in each input file
             line = lst_input_fh[i].readline().strip()
-            current_snp = line.split()[inx_snp_id_column]
-            if line_snp_kept.split()[inx_flag_col] != dict_flags['--na_rep']:
-                # If value at AlT_frq_groupX is not NA (missing),
-                # then keep reading current input file until the SNP is found
-                if current_snp == snp:
-                    if i==0: # If the first input file, need to retain info columns
-                        line_to_write = '\n' + line # Output merged line
-                    else:
-                        line_to_write = line_to_write + '\t' + line.split(maxsplit=number_of_dup_id + inx_indiv_id_starts)[-1]
-                else:   # Keep reading until find the SNP
-                    while current_snp != snp:
-                        line = lst_input_fh[i].readline().strip()
-                        current_snp = line.split()[inx_snp_id_column]
-            else:
+            if line != '': # has not reach end of current input file
+                current_snp = line.split()[inx_snp_id_column]
+                line_to_write = ''
+                missing_info_cols = False # In case the first input file misses this SNP, need to get info cols from other input files
+
+                if line_snp_kept.split()[inx_flag_col] != dict_flags['--na_rep']:
+                    # If value at AlT_frq_groupX is not NA (missing),
+                    # then keep reading current input file until the SNP is found
+                    if current_snp == snp:
+                        if i==0: # If the first input file, need to retain info columns
+                            line_to_write = '\n' + line # Output merged line
+                        else:
+                            line_to_write = line_to_write + '\t' + line.split(maxsplit=number_of_dup_id + inx_indiv_id_starts)[-1]
+                    else:   # Keep reading until find the SNP
+                        while current_snp != snp:
+                            line = lst_input_fh[i].readline().strip()
+                            current_snp = line.split()[inx_snp_id_column]
+                        if missing_info_cols: # Add missing info columns if missing
+                            info_cols = '\t'.join(line.split(maxsplit=inx_indiv_id_starts)[:inx_indiv_id_starts])
+                            line_to_write = '\n' + info_cols + '\t' + line_to_write
+                            missing_info_cols = False
+                else:
                 # If value at AlT_frq_groupX is NA, then skip reading current input file,
                 # since the SNP is missing from this file
                 # Append NA (missing) to the line
                 if i == 0:  # If the SNP is missing from the first file, then need to use info column from other files
-                    pass #!!!!!!!
+                    # Save spot for missing info
+                    line_to_write = '\t'.join([dict_flags['--na_rep'] for j in range(lst_number_of_individuals[i])])
+                    missing_info_cols = True
                 else:
-                    number_of_individuals = 0
-                    line_to_write = line_to_write + '\t' + line.split(maxsplit=number_of_dup_id + inx_indiv_id_starts)[-1]
+                    if missing_info_cols: # If info columns are still missing, get them from current file
+                        info_cols = '\t'.join(line.split(maxsplit=inx_indiv_id_starts)[:inx_indiv_id_starts])
+                        line_to_write = '\n'+info_cols + '\t' + line_to_write
+                        missing_info_cols = False
+                    line_to_write = line_to_write + '\t' + '\t'.join([dict_flags['--na_rep'] for j in range(lst_number_of_individuals[i])])
 
+            fh_output.write(line_to_write)
             print('\n',line.split()[inx_info_column].split(';'))
             print('\n2.',line_snp_kept)
             print('\n3.', line[:50])
@@ -147,9 +163,9 @@ def merge_files(dict_flags=dict_flags, lst_number_of_individuals=lst_number_of_i
             # line_to_write = line_to_write + '\t' + line.split(maxsplit=number_of_dup_id + inx_indiv_id_starts)[-1]
 
 
-            break
-        # print(lst_snp_id)
-        break
+        #     break
+        # # print(lst_snp_id)
+        # break
     # ------------------------------------------
 
     # Close all file handles when done

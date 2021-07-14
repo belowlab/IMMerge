@@ -32,9 +32,7 @@
             - $r^2_i$: Imputation quality $r^2$ of the $i$th input file
             - $n$: Total number of input files to be merged
         2. Weighted average, **ignore NAs**
-            
             $$r^2_{combined} = \frac{\sum_{i=1}^{n}r_i^2 * N_i}{\sum_{i=1}^{n}N_i}$$
-            
             - $r^2_i$: Imputation quality $r^2$ of the $i$th input file
             - $n$: Total number of input files to be merged
             - Ignore missing values. For example a variant has below r2 in each input file:

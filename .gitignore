@@ -1,7 +1,12 @@
 DS_Store
+src/chr21_test.dose.vcf.gz
 variants_excluded.txt
 variants_kept.txt
+variants_excluded_old.txt
+variants_kept_old.txt
 sample_data/
+merged_old.dose.vcf.gz
+merged.dose.vcf.gz
 
 
 # Byte-compiled / optimized / DLL files

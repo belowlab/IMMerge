@@ -1,4 +1,4 @@
-# This code is used to rename vairant ID of merged files
+'''# This code is used to rename vairant ID of merged files
 # TopMED imputation files name SNPs as chr9:12065:C:A
 # Need to rename to format as 'rs00000' for HLA analysis
 
@@ -66,7 +66,7 @@ while line[0] == '#':
         fh_output.write(line_to_write + '\n')
         break  # Break at the column header line
     line = lst_input_fh[0].readline().strip()  # Read line of the first file to decide what to do
-# -------------------------- DONE!!!! write header lines -----------------------------
+# -------------------------- Code above is DONE!!!! write header lines -----------------------------
 
 
 # -------------------- Remove below in real code ------------------------
@@ -107,9 +107,11 @@ def change_INFO_val(org_INFO, alt_frq_combined, MAF_combined, r2_combined):
 def search_SNP_and_read_lines(snp, fh):
     line = fh.readline().strip()  # Read in each line to search for the given variant
     input_snp = line.split(maxsplit=inx_snp_ID + 1)[-2]
-    while input_snp != snp and line != '': # Keep read line until find given snp
+    while line != '': # Keep read line until find given snp
         input_snp = line.split(maxsplit=inx_snp_ID + 1)[-2]
-        line = fh.readline().strip()  # Read in each line to search for the given variant
+        if input_snp == snp:
+            break
+        else: line = fh.readline().strip()  # Read in each line to search for the given variant
     return line
 
 # This function takes in a variant ID,
@@ -239,3 +241,6 @@ while True:
 # Close all file handles when done
 for fh in lst_input_fh: fh.close()
 fh_output.close()
+'''
+
+

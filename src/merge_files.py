@@ -17,6 +17,7 @@ start_time = time.time()    # Track execution time
 # File name can be passed to this code in terminal, or use import this code as in a script (need to modify a little)
 args = sys.argv
 verbose=True
+
 # Process terminal input
 # dict_flags contains values for below flags:
 #   --input, --output, --verbose, --missing, --r2_threshold, --r2_output
@@ -28,34 +29,26 @@ lst_number_of_individuals = get_SNP_list.get_snp_list(dict_flags)
 
 
 # ----------------------- Helper functions -----------------------
-'''
-# This function reads in a file with one snp in each line (ie. variants_kept.txt),
-# then return 3 lists of all SNPs, ALT_Frq_combined, MAF_combined and Rsq_combined
-# The first line needs to be skipped (header line)
-def get_snp_and_info_lst(variants_kept_fn='variants_kept.txt'):
-    df_snps = pd.read_csv(variants_kept_fn, sep='\t')
-    lst_snp = df_snps['SNP']
-    lst_alt_frq = df_snps['ALT_Frq_combined']
-    lst_maf = df_snps['MAF_combined']
-    lst_r2 = df_snps['Rsq_combined']
-    return (lst_snp, lst_alt_frq, lst_maf, lst_r2)
-'''
+# This function prints execution time at the end of run
+def print_execution_time(satrt_time):
+    # merge_files()
+    duration = time.time() - start_time
+    hours = duration // 3600
+    duration = duration % 3600
+    minutes = duration // 60
+    seconds = duration % 60
+    print('\nDuration: {:.2f} hours, {:.2f} minutes, {:.2f} seconds'.format(hours, minutes, seconds))
+    print('End of run')
 
-
-# Merge input files (.dose.vcf.gz) together
+# Merge header lines of input files (.dose.vcf.gz) together
 # Parameters:
-# - lst_number_of_individuals: number of individuals in each input file
-def merge_files(dict_flags=dict_flags, lst_number_of_individuals=lst_number_of_individuals):
+# - number_of_dup_id：User provided number of duplicated IDs in each sub input file
+# - fh_output: file handle of output file
+# - lst_input_fh: list of file handels of input files
+def merge_header_lines(lst_input_fh, fh_output, number_of_dup_id=dict_flags['--duplicate_id']):
     print('\nStart merging files:')
-    number_of_dup_id = dict_flags['--duplicate_id'] # User provided number of duplicated IDs in each sub input file
-    lst_input_fn = dict_flags['--input']
-    output_fn = dict_flags['--output'] + '.dose.vcf.gz'
-    fh_output = gzip.open(output_fn, 'wt')  # Open for writing (appending)
 
-    lst_input_fh = []  # A list to store file handles of input files
-    for fn in lst_input_fn: lst_input_fh.append(gzip.open(fn, 'rt'))
-
-    # # Read in SNPs (with corresponding combined MAF and r2 )need to be kept from file
+    # # Read in SNPs (with corresponding combined MAF and r2) need to be kept from file
     # lst_snp, lst_alt_frq, lst_maf, lst_r2 = get_snp_and_info_lst()
 
     # Read trough header lines (line start with ##) and write into output file
@@ -67,16 +60,13 @@ def merge_files(dict_flags=dict_flags, lst_number_of_individuals=lst_number_of_i
     line = lst_input_fh[0].readline().strip()  # Read the 2nd line of the first input files
 
     inx_indiv_id_starts = 0  # From which column genotype data starts
-    inx_info_column = 0 # Find index of column "INFO", inorder to replace values later
-    inx_snp_id_column = 0   # Find index of column "ID" (ie. column of SNP IDs)
-    while line[0] == '#':
-        if line[0:2] == '##':  # Info lines
+    inx_info_column = 0 # Find index of column "INFO", in order to replace values later
+    while line[0] == '#': # Info and header lines all start with "#"
+        if line[0:2] == '##':  # If Info lines, write everything directly
             fh_output.write('\n' + line)
-            # line = fh.readline().strip()
-            # if line[0:2] == '##':  # Info lines
-            for fh in lst_input_fh[1:]:  # Read the rest fh
+            for fh in lst_input_fh[1:]:  # Read the rest file handles, but do not need to write them
                 line = fh.readline().strip()
-        else:  # Merge and write header line (line starts with single #)
+        else:  # If column header line, then merge and write (line starts with single #)
             # In current TOPMed version these are columns of shared information, then followed by individual IDs:
             #   - CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT
             inx_indiv_id_starts = line.split().index('FORMAT') + 1  # Find from which column genotype data starts
@@ -85,192 +75,155 @@ def merge_files(dict_flags=dict_flags, lst_number_of_individuals=lst_number_of_i
             print('\tIndividual genotype data starts from column #:', inx_indiv_id_starts + 1)
             # Create merged header line, initialize with header from the first file
             line_to_write = '\n' + line
-            for fh in lst_input_fh[1:]:
+            for fh in lst_input_fh[1:]: # Read header line from rest file handles
                 line = fh.readline().strip()
                 # Set maxsplit in slit() function to remove duplicated IDs
                 line_to_write = line_to_write + '\t' + line.split(maxsplit=number_of_dup_id + inx_indiv_id_starts)[-1]
-            fh_output.write(line_to_write)
+            fh_output.write(line_to_write + '\n')
             break
 
         line = lst_input_fh[0].readline().strip()  # Read line of the first file to decide what to do
 
+    return inx_indiv_id_starts, inx_info_column
 
-    # Merge rest lines------------------------------------------
-    count = 0   # For console output
+# This function read line of a given file handle, until find line of given SNP
+# Return string of that line
+def search_SNP_and_read_lines(snp, fh):
+    inx_snp_ID = 2  # Index of column that contains variant ID such as chr21:10000777:C:A (value is 2 in 2021/07 version)
+    line = fh.readline().strip()  # Read in each line to search for the given variant
+    input_snp = line.split(maxsplit=inx_snp_ID + 1)[-2]
+    while line != '':  # Keep read line until find given snp
+        input_snp = line.split(maxsplit=inx_snp_ID + 1)[-2]
+        if input_snp == snp:
+            break
+        else:
+            line = fh.readline().strip()  # Read in each line to search for the given variant
+    return line
 
+# This function takes in a variant ID,
+# checks every input file to find corresponding line and returns a merged line.
+# If a snp is not found in certain input file, fill with symbol of missing values for that file
+# Missing values symbol can be any user supplied string, default is 'NA'
+# Value of INFO field is replace with new values calculated from all input files
+def merge_individual_variant(snp, number_of_dup_id, inx_info_column, new_info_val, inx_indiv_id_starts, lst_alt_frq_val, lst_input_fh):
+    merged_line = ''
+    # flag_first_na: An indicator to show whether a variant is missing from the first input file
+    # If missing, need to fill info columns from other input file
+    flag_first_na = False
+    for i in range(len(lst_input_fh)):
+        if i == 0:  # If the first input file
+            if lst_alt_frq_val[i] != dict_flags['--na_rep']:
+                # If this is the first input file and variant is not missing,
+                # then keep all columns including info columns
+                lst_tmp = search_SNP_and_read_lines(snp, lst_input_fh[i]).split(maxsplit=inx_info_column+1)
+                lst_tmp[inx_info_column] = new_info_val
+                merged_line = '\t'.join(lst_tmp)
+            else:
+                # If variant is missing from the file, then fill with 'NA' and exclude the first few info columns
+                # Need to get values of info columns from other input files
+                merged_line = '\t'.join([dict_flags['--na_rep'] for j in range(lst_number_of_individuals[i])])
+                flag_first_na = True  # Indicate flag: Fill info columns later with other input files
+        else:  # If this is not the first file
+            if lst_alt_frq_val[i] == dict_flags['--na_rep']:
+                # If variant is missing from this input file, then fill 'NA' or user provided missing value symbol
+                merged_line = merged_line + '\t' + '\t'.join(
+                    [dict_flags['--na_rep'] for j in range(lst_number_of_individuals[i]-number_of_dup_id)])
+            else:  # If not missing, split and remove info columns
+                line = search_SNP_and_read_lines(snp, lst_input_fh[i])
+
+                # Skip number_of_dup_id samples when merging
+                merged_line = merged_line + '\t' + line.split(maxsplit=number_of_dup_id+inx_indiv_id_starts)[-1]
+                if flag_first_na:  # If info columns is still missing, add these columns back
+                    lst_tmp = line.split(maxsplit=inx_indiv_id_starts)[:-1]
+                    lst_tmp[inx_info_column] = new_info_val # replace INFO filed with updated INFO value
+                    info_cols = '\t'.join(lst_tmp)
+                    merged_line = info_cols + '\t' + merged_line
+                    flag_first_na = False
+    return merged_line
+
+# This function reads in variant_kept.txt file as a reference, and merge rest of lines in input files
+# (Header lines should be handled by merge_header_lines() funciton, so they are ignored in this funciton)
+# Merged lines are written into output file
+def merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh):
     # Load variants_kept.txt as a reference of merged file
-    # Compare snp ids in each input file with the SNPs in variants_kept.txt
+    # Then compare snp ids in each input file with the SNPs in variants_kept.txt
+    # And replace ALT_frq, MAF and r2 values in INFO column with new values calculated from all input files
+    # - ie, use these columns in variant_kept.txt file: ALT_Frq_combined, MAF_combined, Rsq_combined, Genotyped
+    count = 0  # For console output
     fh_snp_kept = open('variants_kept.txt')
     fh_snp_kept.readline()  # Skip the first line (header)
-
-    # Remove the first 9+duplicate_id columns by setting maxsplit in split()
-
     while True:
         line_snp_kept = fh_snp_kept.readline().strip()
         if line_snp_kept != '':
-            snp = line_snp_kept.split()[0]  # Get SNP ID for comparison
-        else: break # End of SNP to be kept, so stop here
+            lst_snp_kept = line_snp_kept.split()
+            snp = lst_snp_kept[0]  # Get ID of SNP to be kept
+            # Get ALT_frq, MAF and r2 values
+            # Use ALT_frq_groupX values to decide whether SNP is missing in the Xth file
+            lst_alt_frq_val = []
+            ALT_Frq_combined = lst_snp_kept[-3]
+            MAF_combined = lst_snp_kept[-2]
+            Rsq_combined = lst_snp_kept[-1]
+            genotyped = lst_snp_kept[3]
+            # Create new INFO value to replace INFO column in merged line
+            new_info_val = 'AF='+ALT_Frq_combined+';MAF='+MAF_combined+';R2='+Rsq_combined+';'+genotyped
 
-        # line_to_write = '\n' + line # Output merged line
-        # lst_snp_id = line.split(maxsplit=inx_snp_id_column+1)[inx_snp_id_column]
-        # Replace alt_frq, MAF and r2 in INFO column with averaged values
+            inx_alt_frq_col = 4  # Index of ALT_frq column group1
+            # Add ALT_frq of group2,...,groupX to each list
+            for i in range(len(lst_input_fh)):
+                lst_alt_frq_val.append(lst_snp_kept[inx_alt_frq_col])
+                inx_alt_frq_col += 3
 
-        inx_flag_col = 4 # Column index of AlT_frq_group1
-        for i in range(len(lst_input_fh)): # check SNP in each input file
-            line = lst_input_fh[i].readline().strip()
-            if line != '': # has not reach end of current input file
-                current_snp = line.split()[inx_snp_id_column]
-                line_to_write = ''
-                missing_info_cols = False # In case the first input file misses this SNP, need to get info cols from other input files
+            # Search line of this snp in each input file, fill with missing values if not exist
+            # Use ALT_Frq_groupX column in variant_kept.txt file to indicate if this snp exist in input files
+            # Eg. if ALT_Frq_group1 is missing, then this snp does not exist in the first input file
+            # print('SNP to be kept:', snp)
+            merged_line = merge_individual_variant(snp, dict_flags['--duplicate_id'], inx_info_column, new_info_val,
+                                                   inx_indiv_id_starts, lst_alt_frq_val, lst_input_fh)
+            # Write merged line to output file
+            fh_output.write(merged_line)
+            fh_output.write('\n')
 
-                if line_snp_kept.split()[inx_flag_col] != dict_flags['--na_rep']:
-                    # If value at AlT_frq_groupX is not NA (missing),
-                    # then keep reading current input file until the SNP is found
-                    if current_snp == snp:
-                        if i==0: # If the first input file, need to retain info columns
-                            line_to_write = '\n' + line # Output merged line
-                        else:
-                            line_to_write = line_to_write + '\t' + line.split(maxsplit=number_of_dup_id + inx_indiv_id_starts)[-1]
-                    else:   # Keep reading until find the SNP
-                        while current_snp != snp:
-                            line = lst_input_fh[i].readline().strip()
-                            current_snp = line.split()[inx_snp_id_column]
-                        if missing_info_cols: # Add missing info columns if missing
-                            info_cols = '\t'.join(line.split(maxsplit=inx_indiv_id_starts)[:inx_indiv_id_starts])
-                            line_to_write = '\n' + info_cols + '\t' + line_to_write
-                            missing_info_cols = False
-                else:
-                # If value at AlT_frq_groupX is NA, then skip reading current input file,
-                # since the SNP is missing from this file
-                # Append NA (missing) to the line
-                if i == 0:  # If the SNP is missing from the first file, then need to use info column from other files
-                    # Save spot for missing info
-                    line_to_write = '\t'.join([dict_flags['--na_rep'] for j in range(lst_number_of_individuals[i])])
-                    missing_info_cols = True
-                else:
-                    if missing_info_cols: # If info columns are still missing, get them from current file
-                        info_cols = '\t'.join(line.split(maxsplit=inx_indiv_id_starts)[:inx_indiv_id_starts])
-                        line_to_write = '\n'+info_cols + '\t' + line_to_write
-                        missing_info_cols = False
-                    line_to_write = line_to_write + '\t' + '\t'.join([dict_flags['--na_rep'] for j in range(lst_number_of_individuals[i])])
+            # Keep console busy
+            count += 1
+            if count%5000 == 0: print('. {} variants merged'.format(count))
+            elif count%100 == 0: print('.', end='', flush=True)
+            elif count%5000 == 1: print('\t', end='', flush=True)
+        else:
+            print('\n\tEnd of snp to be kept file, total of {} variants merged'.format(count))
+            break  # If reach end of SNP to be kept, then stop
 
-            fh_output.write(line_to_write)
-            print('\n',line.split()[inx_info_column].split(';'))
-            print('\n2.',line_snp_kept)
-            print('\n3.', line[:50])
-            print('\n4.', current_snp, lst_input_fh[i])
-            print('\n5.',line_snp_kept.split()[inx_flag_col], line_snp_kept.split()[inx_flag_col]=='2e-05')
-            # line_to_write = line_to_write + '\t' + line.split(maxsplit=number_of_dup_id + inx_indiv_id_starts)[-1]
-
-
-        #     break
-        # # print(lst_snp_id)
-        # break
-    # ------------------------------------------
-
-    # Close all file handles when done
-    for fh in lst_input_fh: fh.close()
-    fh_output.close()
+    # Close file handles when done
     fh_snp_kept.close()
 
-
-merge_files()
-duration = time.time() - start_time
-hours = duration // 3600
-duration = duration % 3600
-minutes = duration // 60
-seconds = duration % 60
-print('\nDuration: {:.2f} hours, {:.2f} minutes, {:.2f} seconds'.format(hours, minutes, seconds))
-print('End of run')
-
-
-'''
-    # Skip the first 18 lines (header lines of imputation info).
-    # Real data starts from line 19, but need to write the header lines into merged file once
-    for i in range(18):
-        line_group1 = fh_group1.readline().strip()
-        line_group2 = fh_group2.readline().strip()
-        line_group3 = fh_group3.readline().strip()
-        fh_output.write(line_group3 + '\n')
-
-    # Need to write the header line of columns into file
-    # Need to merge group1, group2 and group3 column headers
-    line_group1 = fh_group1.readline().strip()
-    line_group2 = fh_group2.readline().strip()
-    line_group3 = fh_group3.readline().strip()
-    line_to_write = line_group1 + '\t' + line_group2.split(maxsplit=109)[-1] + '\t' + line_group3.split(maxsplit=109)[
-        -1]
-
-    fh_output.write(line_to_write + '\n')
-
-    # Read in actual data line for the while loop to start
-    line_group1 = fh_group1.readline().strip()
-    line_group2 = fh_group2.readline().strip()
-    line_group3 = fh_group3.readline().strip()
-
-    count = 0   # For console output
-    while line_group1 != '' and line_group2 != '' and line_group3 != '':
-        # when end of file is not reached for all three files
-        lst_g1 = line_group1.split()
-        # Remove the first 109 columns by setting maxsplit in split()
-        # Those columns are repeated (with 100 duplicated individuals)
-        lst_g2 = line_group2.split(maxsplit=109)
-        lst_g3 = line_group3.split(maxsplit=109)
-        # Get snp ID of each group and compare
-        snp_group1 = lst_g1[2]
-        snp_group2 = lst_g2[2]
-        snp_group3 = lst_g3[2]
-
-        # Compare snp ids with the snp_keep list file (lst_snp_to_keep)
-        # Pop snps from the list until it's empty
-        if lst_snp_to_keep != []:
-            snp_to_keep = lst_snp_to_keep.pop(0)
-            while snp_group1 != snp_to_keep:
-                # To see if current sno in the vcf.dose.gz file needs to be kept
-                # Continue read the file until find the snp
-                line_group1 = fh_group1.readline().strip()
-                lst_g1 = line_group1.split()
-                snp_group1 = lst_g1[2]
-            while snp_group2 != snp_to_keep:
-                line_group2 = fh_group2.readline().strip()
-                lst_g2 = line_group2.split(maxsplit=109)
-                snp_group2 = lst_g2[2]
-            while snp_group3 != snp_to_keep:
-                line_group3 = fh_group3.readline().strip()
-                lst_g3 = line_group3.split(maxsplit=109)
-                snp_group3 = lst_g3[2]
-
-            # Write into output file
-            # Piece together 3 files (first 100 individuals are replicated)
-            line_to_write = line_group1 + '\t' + lst_g2[-1] + '\t' + lst_g3[-1]
-
-            # print('group1:\t\tline len = ', len(lst_g1))
-            # print('group2:\t\tline len = ', len(lst_g2[-1].split()))
-            # print('group3:\t\tline len = ', len(lst_g3[-1].split()))
-            # print(len(lst_g3))
-            # quit()
-            # print('line to write:\tlen =',len(line_to_write.split()), '\n-------------')
-
-            fh_output.write(line_to_write + '\n')
-
-        # Below is to keep console busy
-        count = count + 1
-        if count % 100 == 0:
-            print('.', end='', flush=True)
-
-        if count % 10000 == 0:
-            print('\n' + chromosome + ':', count, 'SNPs have been merged', flush=True)
-        elif count % 1000 == 0:
-            print('', flush=True)
-
-        line_group1 = fh_group1.readline().strip()
-        line_group2 = fh_group2.readline().strip()
-        line_group3 = fh_group3.readline().strip()
-
-    print('\n' + chromosome + ':', count, 'SNPs have been merged')
-    print('\n------------------------------------\nDone')
-'''
 # ----------------------- End of helper functions -----------------------
+
+
+# Code body
+# 1. Connect file handles of input and output files for writing
+# Store file handles of input files in a list for iteration
+lst_input_fn = dict_flags['--input']
+lst_input_fh = [] # a list to store file handles of input files
+for fn in lst_input_fn: lst_input_fh.append(gzip.open(fn, 'rt'))
+# File handle for output
+output_fn = dict_flags['--output'] + '.dose.vcf.gz'
+fh_output = gzip.open(output_fn, 'wt')  # Open for writing (appending)
+
+# 2. Merge header lines (row 0-18 in this version (2021/07,v1))
+# Also Get index number of some columns:
+# - inx_indiv_id_starts: index of the first individual ID (such as R200000348) columns in input .dose.vcf.gz file
+# - inx_info_column: index of INFO columns in input .dose.vcf.gz file
+# - inx_snp_id_column: index of ID columns in input .dose.vcf.gz file
+inx_indiv_id_starts, inx_info_column = merge_header_lines(lst_input_fh, fh_output)
+
+# 3. Merge rest lines (from row 19 in this version (2021/07,v1))
+# Merge files, close file handles when done
+merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh)
+for fh in lst_input_fh: fh.close()
+fh_output.close()
+
+# Print out execution time
+print_execution_time(start_time)
+
 
 
 

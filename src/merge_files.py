@@ -11,6 +11,7 @@ import process_args
 import get_SNP_list
 import check_r2_setting_for_imputation
 import time
+import multiprocessing
 
 start_time = time.time()    # Track execution time
 
@@ -46,8 +47,6 @@ def print_execution_time(satrt_time):
 # - fh_output: file handle of output file
 # - lst_input_fh: list of file handels of input files
 def merge_header_lines(lst_input_fh, fh_output, number_of_dup_id=dict_flags['--duplicate_id']):
-    print('\nStart merging files:')
-
     # # Read in SNPs (with corresponding combined MAF and r2) need to be kept from file
     # lst_snp, lst_alt_frq, lst_maf, lst_r2 = get_snp_and_info_lst()
 
@@ -135,7 +134,7 @@ def merge_individual_variant(snp, number_of_dup_id, inx_info_column, new_info_va
                 merged_line = merged_line + '\t' + line.split(maxsplit=number_of_dup_id+inx_indiv_id_starts)[-1]
                 if flag_first_na:  # If info columns is still missing, add these columns back
                     lst_tmp = line.split(maxsplit=inx_indiv_id_starts)[:-1]
-                    lst_tmp[inx_info_column] = new_info_val # replace INFO filed with updated INFO value
+                    lst_tmp[inx_info_column] = new_info_val # replace INFO field with updated INFO value
                     info_cols = '\t'.join(lst_tmp)
                     merged_line = info_cols + '\t' + merged_line
                     flag_first_na = False
@@ -144,14 +143,25 @@ def merge_individual_variant(snp, number_of_dup_id, inx_info_column, new_info_va
 # This function reads in variant_kept.txt file as a reference, and merge rest of lines in input files
 # (Header lines should be handled by merge_header_lines() funciton, so they are ignored in this funciton)
 # Merged lines are written into output file
-def merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh):
+def merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, fh_output):
     # Load variants_kept.txt as a reference of merged file
     # Then compare snp ids in each input file with the SNPs in variants_kept.txt
     # And replace ALT_frq, MAF and r2 values in INFO column with new values calculated from all input files
     # - ie, use these columns in variant_kept.txt file: ALT_Frq_combined, MAF_combined, Rsq_combined, Genotyped
     count = 0  # For console output
-    fh_snp_kept = open('variants_kept.txt')
+    fh_snp_kept = open('variants_kept_'+dict_flags['--output']+'.txt')
+    print('\tvariants_kept_' + dict_flags['--output'] + '.txt file loaded')
     fh_snp_kept.readline()  # Skip the first line (header)
+
+    # multiprocessing.set_start_method("fork")  # This is necessary for python 3.8, but won't matter in other versions
+    # # To be safe, use the max number of cores to do multi processing, unless only one core available
+    # if multiprocessing.cpu_count() == 1:
+    #     number_of_cores_to_use = 1
+    # else:
+    #     number_of_cores_to_use = multiprocessing.cpu_count() - 1
+    # with multiprocessing.Pool(number_of_cores_to_use) as p:
+    #     run_merge_files()
+
     while True:
         line_snp_kept = fh_snp_kept.readline().strip()
         if line_snp_kept != '':
@@ -191,39 +201,47 @@ def merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh):
         else:
             print('\n\tEnd of snp to be kept file, total of {} variants merged'.format(count))
             break  # If reach end of SNP to be kept, then stop
-
     # Close file handles when done
     fh_snp_kept.close()
 
 # ----------------------- End of helper functions -----------------------
 
+# A function to run each step all together
+def run_merge_files():
+    print('\nStart merging files:')
+    # 1. Connect file handles of input and output files for writing
+    # Store file handles of input files in a list for iteration
+    lst_input_fn = dict_flags['--input']
+    lst_input_fh = []  # a list to store file handles of input files
+    for fn in lst_input_fn: lst_input_fh.append(gzip.open(fn, 'rt'))
+    # File handle for output
+    output_fn = dict_flags['--output'] + '.dose.vcf.gz'
+    fh_output = gzip.open(output_fn, 'wt')  # Open for writing (appending)
 
-# Code body
-# 1. Connect file handles of input and output files for writing
-# Store file handles of input files in a list for iteration
-lst_input_fn = dict_flags['--input']
-lst_input_fh = [] # a list to store file handles of input files
-for fn in lst_input_fn: lst_input_fh.append(gzip.open(fn, 'rt'))
-# File handle for output
-output_fn = dict_flags['--output'] + '.dose.vcf.gz'
-fh_output = gzip.open(output_fn, 'wt')  # Open for writing (appending)
+    # 2. Merge header lines (row 0-18 in this version (2021/07,v1))
+    # Also Get index number of some columns:
+    # - inx_indiv_id_starts: index of the first individual ID (such as R200000348) columns in input .dose.vcf.gz file
+    # - inx_info_column: index of INFO columns in input .dose.vcf.gz file
+    # - inx_snp_id_column: index of ID columns in input .dose.vcf.gz file
+    inx_indiv_id_starts, inx_info_column = merge_header_lines(lst_input_fh, fh_output)
+    print('\tMerged header lines (lines start with #)')
 
-# 2. Merge header lines (row 0-18 in this version (2021/07,v1))
-# Also Get index number of some columns:
-# - inx_indiv_id_starts: index of the first individual ID (such as R200000348) columns in input .dose.vcf.gz file
-# - inx_info_column: index of INFO columns in input .dose.vcf.gz file
-# - inx_snp_id_column: index of ID columns in input .dose.vcf.gz file
-inx_indiv_id_starts, inx_info_column = merge_header_lines(lst_input_fh, fh_output)
+    # 3. Merge rest lines (from row 19 in this version (2021/07,v1))
+    # Merge files, close file handles when done
+    merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, fh_output)
+    for fh in lst_input_fh: fh.close()
+    fh_output.close()
 
-# 3. Merge rest lines (from row 19 in this version (2021/07,v1))
-# Merge files, close file handles when done
-merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh)
-for fh in lst_input_fh: fh.close()
-fh_output.close()
+    # Print out execution time
+    print_execution_time(start_time)
 
-# Print out execution time
-print_execution_time(start_time)
+    # multiprocessing.set_start_method("fork")  # This is necessary for python 3.8, but won't matter in other versions
+    # # To be safe, use the max number of cores to do multi processing, unless only one core available
+    # if multiprocessing.cpu_count() == 1:
+    #     number_of_cores_to_use = 1
+    # else:
+    #     number_of_cores_to_use = multiprocessing.cpu_count() - 1
+    # with multiprocessing.Pool(number_of_cores_to_use) as p:
+    #     run_merge_files()
 
-
-
-
+run_merge_files()

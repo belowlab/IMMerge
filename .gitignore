@@ -7,6 +7,17 @@ variants_kept_old.txt
 sample_data/
 merged_old.dose.vcf.gz
 merged.dose.vcf.gz
+chr21.dose.vcf.gz
+chr21_test.dose.vcf.gz
+merged_chr21.dose.vcf.gz
+merged_chr20.dose.vcf.gz
+variants_excluded_merged.txt
+variants_excluded_merged_chr20.txt
+variants_excluded_merged_chr21.txt
+variants_kept_merged.txt
+variants_kept_merged_chr20.txt
+variants_kept_merged_chr21.txt
+
 
 
 # Byte-compiled / optimized / DLL files

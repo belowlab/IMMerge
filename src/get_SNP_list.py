@@ -59,11 +59,9 @@ def __merge_snps(lst_info_df, cols_to_keep=['SNP', 'REF(0)', 'ALT(1)', 'Genotype
         if i==0: # Merge the 1st and 2nd df
             # Need to merge on multiple keys: ['SNP', 'REF(0)', 'ALT(1)','Genotyped']
             # Otherwise will be NAs if a variant is not found in the first info file
-            # Set "sort=True" sp that output SNP is sorted (otherwise merging of dose.gz files will have error)
             df_merged = lst_info_df[i][cols_to_keep].merge(lst_info_df[i+1][cols_to_keep],
                                                            how='outer',
                                                            on=['SNP', 'REF(0)', 'ALT(1)','Genotyped'],
-                                                           sort=True,
                                                            suffixes=('_group'+str(i+1), '_group'+str(i+2)))
             i = i+2
         else:
@@ -72,8 +70,7 @@ def __merge_snps(lst_info_df, cols_to_keep=['SNP', 'REF(0)', 'ALT(1)', 'Genotype
                                                                                      'Rsq':'Rsq_group'+str(i+1),
                                                                                      'ALT_Frq':'ALT_Frq_group'+str(i+1)}),
                                         how='outer',
-                                        on=['SNP', 'REF(0)', 'ALT(1)','Genotyped'],
-                                        sort=True)
+                                        on=['SNP', 'REF(0)', 'ALT(1)','Genotyped'])
             i+=1
     return df_merged
 
@@ -146,8 +143,8 @@ def __calculate_weighted_r2_maf_altFrq(df_merged, col_name_r2_combined, col_name
 #  - Two text files saved in current directory: variants_kept.txt and variants_excluded.txt
 def __process_output(df_merged, dict_flags):
     # Set output file names
-    to_keep_fn = 'variants_kept.txt'
-    to_exclude_fn = 'variants_excluded.txt'
+    to_keep_fn = 'variants_kept_'+dict_flags['--output']+'.txt'
+    to_exclude_fn = 'variants_excluded_'+dict_flags['--output']+'.txt'
     missing = dict_flags['--missing']
     mask_to_keep = ''   # Use this when --missing is 0
     mask_to_exclude = ''    # Use this when --missing is 0

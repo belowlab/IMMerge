@@ -26,9 +26,8 @@ dict_flags = process_args.process_args(args) # Process terminal input
 if dict_flags['--verbose']!='true': verbose=False
 
 check_r2_setting_for_imputation.check_imputatilson_parameters(lst_fn=dict_flags['--input'])
-# df_index: a dataframe with row index of variants in each input file, save it in output in case needed
-# Eg. SNP1 is from row 0 (index) of file 1 and row 3 of file 2. Index starts from data lines, ignore header lines
-lst_number_of_individuals, df_index = get_SNP_list.get_snp_list(dict_flags)
+lst_number_of_individuals = get_SNP_list.get_snp_list(dict_flags)
+
 
 # ----------------------- Helper functions -----------------------
 # This function prints execution time at the end of run
@@ -86,10 +85,6 @@ def merge_header_lines(lst_input_fh, fh_output, number_of_dup_id=dict_flags['--d
 
     return inx_indiv_id_starts, inx_info_column
 
-
-
-
-# QUESTION !!!!!!!!!!!
 # This function read line of a given file handle, until find line of given SNP
 # Return string of that line
 def search_SNP_and_read_lines(snp, fh):
@@ -103,22 +98,6 @@ def search_SNP_and_read_lines(snp, fh):
         else:
             line = fh.readline().strip()  # Read in each line to search for the given variant
     return line
-
-
-
-
-# def merge_indiv_v2(snp, df_index, count, number_of_dup_id, inx_info_column, new_info_val, inx_indiv_id_starts, lst_alt_frq_val, lst_input_fh):
-#     merged_line = ''
-#     lst_index_vals = df_index.iloc[count - 1, :]
-#     for i in range(len(lst_index_vals)):
-#         if pd.isna(lst_index_vals[i]):  # If index is NA, then do not need to find this variant in corresponding input file
-#             # Fill with NAs
-#             merged_line = '\t'.join([dict_flags['--na_rep'] for j in range(lst_number_of_individuals[i])])
-#         else:   # If index is not NA, then read the input file and find row of that index (start from actual data line)
-#
-
-
-
 
 # This function takes in a variant ID,
 # checks every input file to find corresponding line and returns a merged line.
@@ -148,7 +127,7 @@ def merge_individual_variant(snp, number_of_dup_id, inx_info_column, new_info_va
                 # If variant is missing from this input file, then fill 'NA' or user provided missing value symbol
                 merged_line = merged_line + '\t' + '\t'.join(
                     [dict_flags['--na_rep'] for j in range(lst_number_of_individuals[i]-number_of_dup_id)])
-            else:  # If not missing from current input file, split and remove info columns and duplicated individuals
+            else:  # If not missing, split and remove info columns
                 line = search_SNP_and_read_lines(snp, lst_input_fh[i])
 
                 # Skip number_of_dup_id samples when merging
@@ -174,52 +153,54 @@ def merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, 
     print('\tvariants_kept_' + dict_flags['--output'] + '.txt file loaded')
     fh_snp_kept.readline()  # Skip the first line (header)
 
-    multiprocessing.set_start_method("fork")  # This is necessary for python 3.8, but won't matter in other versions
-    # To be safe, use the max number of cores to do multi processing, unless only one core available
-    if multiprocessing.cpu_count() == 1:
-        number_of_cores_to_use = 1
-    else:
-        number_of_cores_to_use = multiprocessing.cpu_count() - 1
-    with multiprocessing.Pool(number_of_cores_to_use) as p:
-        while True:
-            line_snp_kept = fh_snp_kept.readline().strip()
-            if line_snp_kept != '':
-                lst_snp_kept = line_snp_kept.split()
-                snp = lst_snp_kept[0]  # Get ID of SNP to be kept
-                # Get ALT_frq, MAF and r2 values
-                # Use ALT_frq_groupX values to decide whether SNP is missing in the Xth file
-                lst_alt_frq_val = []
-                ALT_Frq_combined = lst_snp_kept[-3]
-                MAF_combined = lst_snp_kept[-2]
-                Rsq_combined = lst_snp_kept[-1]
-                genotyped = lst_snp_kept[3]
-                # Create new INFO value to replace INFO column in merged line
-                new_info_val = 'AF='+ALT_Frq_combined+';MAF='+MAF_combined+';R2='+Rsq_combined+';'+genotyped
+    # multiprocessing.set_start_method("fork")  # This is necessary for python 3.8, but won't matter in other versions
+    # # To be safe, use the max number of cores to do multi processing, unless only one core available
+    # if multiprocessing.cpu_count() == 1:
+    #     number_of_cores_to_use = 1
+    # else:
+    #     number_of_cores_to_use = multiprocessing.cpu_count() - 1
+    # with multiprocessing.Pool(number_of_cores_to_use) as p:
+    #     run_merge_files()
 
-                inx_alt_frq_col = 4  # Index of ALT_frq column group1
-                # Add ALT_frq of group2,...,groupX to each list
-                for i in range(len(lst_input_fh)):
-                    lst_alt_frq_val.append(lst_snp_kept[inx_alt_frq_col])
-                    inx_alt_frq_col += 3
+    while True:
+        line_snp_kept = fh_snp_kept.readline().strip()
+        if line_snp_kept != '':
+            lst_snp_kept = line_snp_kept.split()
+            snp = lst_snp_kept[0]  # Get ID of SNP to be kept
+            # Get ALT_frq, MAF and r2 values
+            # Use ALT_frq_groupX values to decide whether SNP is missing in the Xth file
+            lst_alt_frq_val = []
+            ALT_Frq_combined = lst_snp_kept[-3]
+            MAF_combined = lst_snp_kept[-2]
+            Rsq_combined = lst_snp_kept[-1]
+            genotyped = lst_snp_kept[3]
+            # Create new INFO value to replace INFO column in merged line
+            new_info_val = 'AF='+ALT_Frq_combined+';MAF='+MAF_combined+';R2='+Rsq_combined+';'+genotyped
 
-                # Search line of this snp in each input file, fill with missing values if not exist
-                # Use ALT_Frq_groupX column in variant_kept.txt file to indicate if this snp exist in input files
-                # Eg. if ALT_Frq_group1 is missing, then this snp does not exist in the first input file
-                # print('SNP to be kept:', snp)
-                merged_line = merge_individual_variant(snp, dict_flags['--duplicate_id'], inx_info_column, new_info_val,
-                                                       inx_indiv_id_starts, lst_alt_frq_val, lst_input_fh)
-                # Write merged line to output file
-                fh_output.write(merged_line)
-                fh_output.write('\n')
+            inx_alt_frq_col = 4  # Index of ALT_frq column group1
+            # Add ALT_frq of group2,...,groupX to each list
+            for i in range(len(lst_input_fh)):
+                lst_alt_frq_val.append(lst_snp_kept[inx_alt_frq_col])
+                inx_alt_frq_col += 3
 
-                # Keep console busy
-                count += 1
-                if count%5000 == 0: print('. {} variants merged'.format(count))
-                elif count%100 == 0: print('.', end='', flush=True)
-                elif count%5000 == 1: print('\t', end='', flush=True)
-            else:
-                print('\n\tEnd of snp to be kept file, total of {} variants merged'.format(count))
-                break  # If reach end of SNP to be kept, then stop
+            # Search line of this snp in each input file, fill with missing values if not exist
+            # Use ALT_Frq_groupX column in variant_kept.txt file to indicate if this snp exist in input files
+            # Eg. if ALT_Frq_group1 is missing, then this snp does not exist in the first input file
+            # print('SNP to be kept:', snp)
+            merged_line = merge_individual_variant(snp, dict_flags['--duplicate_id'], inx_info_column, new_info_val,
+                                                   inx_indiv_id_starts, lst_alt_frq_val, lst_input_fh)
+            # Write merged line to output file
+            fh_output.write(merged_line)
+            fh_output.write('\n')
+
+            # Keep console busy
+            count += 1
+            if count%5000 == 0: print('. {} variants merged'.format(count))
+            elif count%100 == 0: print('.', end='', flush=True)
+            elif count%5000 == 1: print('\t', end='', flush=True)
+        else:
+            print('\n\tEnd of snp to be kept file, total of {} variants merged'.format(count))
+            break  # If reach end of SNP to be kept, then stop
     # Close file handles when done
     fh_snp_kept.close()
 

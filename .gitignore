@@ -19,7 +19,7 @@ variants_kept_merged_chr20.txt
 variants_kept_merged_chr21.txt
 index.txt
 index_merged.txt
-
+index_merged_chr20.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

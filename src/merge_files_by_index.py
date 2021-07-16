@@ -1,6 +1,9 @@
 # Step 02
+# Instead of
 # This code is used to merge imputed files from TopMed based on list of saved variants in prior steps
 # The goal is to combine post-imputation vcf.gz files into one vcf.gz file
+
+print('\nVersion 1.0')
 
 import pandas as pd
 import gzip
@@ -11,9 +14,7 @@ import check_r2_setting_for_imputation
 import time
 import multiprocessing
 
-print('\nVersion 1.0')
 start_time = time.time()    # Track execution time
-print('Start at', time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(start_time)))
 
 # File name can be passed to this code in terminal, or use import this code as in a script (need to modify a little)
 args = sys.argv

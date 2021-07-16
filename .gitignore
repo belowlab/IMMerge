@@ -17,7 +17,8 @@ variants_excluded_merged_chr21.txt
 variants_kept_merged.txt
 variants_kept_merged_chr20.txt
 variants_kept_merged_chr21.txt
-
+index.txt
+index_merged.txt
 
 
 # Byte-compiled / optimized / DLL files

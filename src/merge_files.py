@@ -167,6 +167,7 @@ def merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, 
         if line_snp_kept != '':
             lst_snp_kept = line_snp_kept.split()
             snp = lst_snp_kept[0]  # Get ID of SNP to be kept
+
             # Get ALT_frq, MAF and r2 values
             # Use ALT_frq_groupX values to decide whether SNP is missing in the Xth file
             lst_alt_frq_val = []

@@ -42,6 +42,7 @@ def __get_lst_info_df(dict_flags):
 #                 In this version use ['SNP', 'REF(0)', 'ALT(1)', 'Genotyped','ALT_Frq', 'MAF', 'Rsq']
 # Return: a Dataframe with all variants and columns REF(0), ALT(1), Genotyped, ALT_Frq, MAF and Rsq
 # - For duplicated fields MAF and Rsq, column are renamed as MAF_group1, Rsq_group1, etc
+# - lst_index_col_names: a list to store index column names, such as [index_group1, index_group2, ...]
 def __merge_snps(lst_info_df, cols_to_keep=['SNP', 'REF(0)', 'ALT(1)', 'Genotyped', 'ALT_Frq', 'MAF', 'Rsq']):
     # REF(0), ALT(1), Genotyped should be the same for all files,
     # so only keep these columns from one dataframe to merge
@@ -55,24 +56,36 @@ def __merge_snps(lst_info_df, cols_to_keep=['SNP', 'REF(0)', 'ALT(1)', 'Genotype
 
     i=0
     df_merged='' # A DataFrame of merged .info.gz df
+    lst_index_col_names = [] # A list sto store column names of index columns
     while i<len(lst_info_df):
         if i==0: # Merge the 1st and 2nd df
             # Need to merge on multiple keys: ['SNP', 'REF(0)', 'ALT(1)','Genotyped']
             # Otherwise will be NAs if a variant is not found in the first info file
-            df_merged = lst_info_df[i][cols_to_keep].merge(lst_info_df[i+1][cols_to_keep],
+            # Use reset_index() to track index number of a varaint in each input file
+            # Eg. variant rs0000 is from row index 1 in input file 1 and row #3 in input file 2
+            df_merged = lst_info_df[i][cols_to_keep].reset_index().merge(lst_info_df[i+1][cols_to_keep].reset_index(),
                                                            how='outer',
                                                            on=['SNP', 'REF(0)', 'ALT(1)','Genotyped'],
                                                            suffixes=('_group'+str(i+1), '_group'+str(i+2)))
-            i = i+2
+
+            lst_index_col_names.append('index_group'+str(i+1))
+            lst_index_col_names.append('index_group'+str(i+2))
+            i = i + 2
         else:
             # Merge and rename columns of df with correct suffix (ie. _groupX)
-            df_merged = df_merged.merge(lst_info_df[i][cols_to_keep].rename(columns={'MAF':'MAF_group'+str(i+1),
-                                                                                     'Rsq':'Rsq_group'+str(i+1),
-                                                                                     'ALT_Frq':'ALT_Frq_group'+str(i+1)}),
+            df_merged = df_merged.merge(lst_info_df[i][cols_to_keep].reset_index().rename(columns={'MAF':'MAF_group'+str(i+1),
+                                                                                                   'Rsq':'Rsq_group'+str(i+1),
+                                                                                                   'ALT_Frq':'ALT_Frq_group'+str(i+1),
+                                                                                                   'index':'index_group' + str(i+1)}),
                                         how='outer',
                                         on=['SNP', 'REF(0)', 'ALT(1)','Genotyped'])
+            lst_index_col_names.append('index_group' + str(i+1))
             i+=1
-    return df_merged
+
+    # Get chr and position from snp IDs
+    # df_merged['chr'] = df_merged['SNP'].apply(lambda x: x.split(':')[0])
+    df_merged['pos'] = df_merged['SNP'].apply(lambda x: x.split(':')[1])
+    return df_merged, lst_index_col_names
 
 # This function calculated weighted r2 and MAF,
 # assign values to a column (col_name_r2_combined, col_name_maf_combined) in df_merged
@@ -141,7 +154,7 @@ def __calculate_weighted_r2_maf_altFrq(df_merged, col_name_r2_combined, col_name
 #  - missing: A variant is allowed to be missing in this number of files. Otherwise it will be excluded
 # Output:
 #  - Two text files saved in current directory: variants_kept.txt and variants_excluded.txt
-def __process_output(df_merged, dict_flags):
+def __process_output(df_merged, dict_flags, lst_index_col_names):
     # Set output file names
     to_keep_fn = 'variants_kept_'+dict_flags['--output']+'.txt'
     to_exclude_fn = 'variants_excluded_'+dict_flags['--output']+'.txt'
@@ -159,6 +172,7 @@ def __process_output(df_merged, dict_flags):
         df_merged[col_name_r2] = pd.to_numeric(df_merged[col_name_r2], errors='coerce')
         df_merged[col_name_maf] = pd.to_numeric(df_merged[col_name_maf], errors='coerce')
         df_merged[col_name_alt_frq] = pd.to_numeric(df_merged[col_name_alt_frq], errors='coerce')
+        df_merged['pos'] = pd.to_numeric(df_merged['pos'], errors='coerce')
 
         if missing == 0:  # If only save variants shared by all input files
             # Check columns of Rsq (MAF also works) such as: Rsq_group1, Rsq_group2,...
@@ -196,31 +210,40 @@ def __process_output(df_merged, dict_flags):
     if missing == 0:
         # Use %g for precision formatting, will get a mix of scientific notation when number is too small
         # Or use %.6f, for 6 precision after dot. But if value is stoo small will be round to 0
-        df_merged[mask_to_keep].to_csv(to_keep_fn, index=False, sep='\t', na_rep=dict_flags['--na_rep'], float_format=float_format)
-        df_merged[mask_to_exclude].to_csv(to_exclude_fn, index=False, sep='\t', na_rep=dict_flags['--na_rep'], float_format=float_format)
+        # Save variant_kept sorted by position and index in each input file, since there could be multiple variants at the same position
+        df_merged[mask_to_keep].sort_values(by=['pos', 'SNP']+lst_index_col_names)\
+            .drop(columns=lst_index_col_names+['pos'])\
+            .to_csv(to_keep_fn, index=False, sep='\t', na_rep=dict_flags['--na_rep'], float_format=float_format)
+        df_merged[mask_to_exclude].drop(columns=lst_index_col_names+['pos']).to_csv(to_exclude_fn, index=False,
+                                                                                           sep='\t', na_rep=dict_flags['--na_rep'],
+                                                                                           float_format=float_format)
         print('\tNumber of saved variants:', df_merged[mask_to_keep].shape[0])
         print('\tNumber of excluded variants:', df_merged[mask_to_exclude].shape[0])
     else:   # Use user specify allowed missingness, max value is number of input files
         # Note thresh in dropna(): Require that many non-NA values in order to not drop
         inx_to_keep = df_merged[lst_col_names].dropna(
             thresh=len(dict_flags['--input']) - dict_flags['--missing']).index
-        df_merged.iloc[inx_to_keep, :].to_csv(to_keep_fn, index=False, sep='\t', na_rep=dict_flags['--na_rep'], float_format=float_format)
-        df_merged.drop(index=inx_to_keep).to_csv(to_exclude_fn, index=False, sep='\t',
-                                                 na_rep=dict_flags['--na_rep'], float_format=float_format)
+        df_merged.iloc[inx_to_keep, :].sort_values(by=['pos', 'SNP'])\
+            .drop(columns=lst_index_col_names+['pos'])\
+            .to_csv(to_keep_fn,index=False, sep='\t', na_rep=dict_flags['--na_rep'], float_format=float_format)
+        df_merged.drop(index=inx_to_keep).drop(columns=lst_index_col_names+['pos']).to_csv(to_exclude_fn,
+                                                                                                  index=False, sep='\t',
+                                                                                                  na_rep=dict_flags['--na_rep'],
+                                                                                                  float_format=float_format)
         print('\tNumber of saved variants:', len(inx_to_keep))
         print('\tNumber of excluded variants:', df_merged.drop(index=inx_to_keep).shape[0])
-
+    df_merged.sort_values(by=['pos', 'SNP']+lst_index_col_names)[['SNP']+lst_index_col_names].to_csv('index_'+dict_flags['--output']+'.txt',sep='\t', index=False)
     print('\nNumbers of individuals in each input file:', lst_number_of_individuals)
     return lst_number_of_individuals
-
+# ---------------- End opf helper functions -----------------
 
 # A wrapper function to run this script
 # Returns dict_flags for next step
 def get_snp_list(dict_flags):
     lst_info_df = __get_lst_info_df(dict_flags)
-    df_merged = __merge_snps(lst_info_df)
+    df_merged, lst_index_col_names = __merge_snps(lst_info_df)
     print('\nNumber of variants:')
     print('\tTotal number from all input files:', df_merged.shape[0])
-    lst_number_of_individuals = __process_output(df_merged, dict_flags)
+    lst_number_of_individuals = __process_output(df_merged, dict_flags, lst_index_col_names)
     return lst_number_of_individuals # This return value is used in the final merging step
 

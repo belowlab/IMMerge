@@ -26,9 +26,8 @@ dict_flags = process_args.process_args(args) # Process terminal input
 if dict_flags['--verbose']!='true': verbose=False
 
 check_r2_setting_for_imputation.check_imputatilson_parameters(lst_fn=dict_flags['--input'])
-# df_index: a dataframe with row index of variants in each input file, save it in output in case needed
-# Eg. SNP1 is from row 0 (index) of file 1 and row 3 of file 2. Index starts from data lines, ignore header lines
-lst_number_of_individuals, df_index = get_SNP_list.get_snp_list(dict_flags)
+lst_number_of_individuals = get_SNP_list.get_snp_list(dict_flags)
+
 
 # ----------------------- Helper functions -----------------------
 # This function prints execution time at the end of run
@@ -86,10 +85,6 @@ def merge_header_lines(lst_input_fh, fh_output, number_of_dup_id=dict_flags['--d
 
     return inx_indiv_id_starts, inx_info_column
 
-
-
-
-# QUESTION !!!!!!!!!!!
 # This function read line of a given file handle, until find line of given SNP
 # Return string of that line
 def search_SNP_and_read_lines(snp, fh):
@@ -103,22 +98,6 @@ def search_SNP_and_read_lines(snp, fh):
         else:
             line = fh.readline().strip()  # Read in each line to search for the given variant
     return line
-
-
-
-
-# def merge_indiv_v2(snp, df_index, count, number_of_dup_id, inx_info_column, new_info_val, inx_indiv_id_starts, lst_alt_frq_val, lst_input_fh):
-#     merged_line = ''
-#     lst_index_vals = df_index.iloc[count - 1, :]
-#     for i in range(len(lst_index_vals)):
-#         if pd.isna(lst_index_vals[i]):  # If index is NA, then do not need to find this variant in corresponding input file
-#             # Fill with NAs
-#             merged_line = '\t'.join([dict_flags['--na_rep'] for j in range(lst_number_of_individuals[i])])
-#         else:   # If index is not NA, then read the input file and find row of that index (start from actual data line)
-#
-
-
-
 
 # This function takes in a variant ID,
 # checks every input file to find corresponding line and returns a merged line.
@@ -148,7 +127,7 @@ def merge_individual_variant(snp, number_of_dup_id, inx_info_column, new_info_va
                 # If variant is missing from this input file, then fill 'NA' or user provided missing value symbol
                 merged_line = merged_line + '\t' + '\t'.join(
                     [dict_flags['--na_rep'] for j in range(lst_number_of_individuals[i]-number_of_dup_id)])
-            else:  # If not missing from current input file, split and remove info columns and duplicated individuals
+            else:  # If not missing, split and remove info columns
                 line = search_SNP_and_read_lines(snp, lst_input_fh[i])
 
                 # Skip number_of_dup_id samples when merging

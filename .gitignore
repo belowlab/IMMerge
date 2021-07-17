@@ -20,6 +20,11 @@ variants_kept_merged_chr21.txt
 index.txt
 index_merged.txt
 index_merged_chr20.txt
+index_merged_chr1.txt
+merged_chr1.dose.vcf.gz
+variants_excluded_merged_chr1.txt
+variants_kept_merged_chr1.txt
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

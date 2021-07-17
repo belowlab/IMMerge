@@ -154,16 +154,14 @@ def merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, 
     print('\tvariants_kept_' + dict_flags['--output'] + '.txt file loaded')
     fh_snp_kept.readline()  # Skip the first line (header)
 
-    # multiprocessing.set_start_method("fork")  # This is necessary for python 3.8, but won't matter in other versions
-    # # To be safe, use the max number of cores to do multi processing, unless only one core available
-    # if multiprocessing.cpu_count() == 1:
-    #     number_of_cores_to_use = 1
-    # else:
-    #     number_of_cores_to_use = multiprocessing.cpu_count() - 1
-    # with multiprocessing.Pool(number_of_cores_to_use) as p:
-    #     run_merge_files()
-
-    while True:
+    multiprocessing.set_start_method("fork")  # This is necessary for python 3.8, but won't matter in other versions
+    # To be safe, use the max number of cores to do multi processing, unless only one core available
+    if multiprocessing.cpu_count() == 1:
+        number_of_cores_to_use = 1
+    else:
+        number_of_cores_to_use = multiprocessing.cpu_count() - 1
+    with multiprocessing.Pool(number_of_cores_to_use) as p:
+        while True:
         line_snp_kept = fh_snp_kept.readline().strip()
         if line_snp_kept != '':
             lst_snp_kept = line_snp_kept.split()

@@ -13,7 +13,7 @@ import multiprocessing
 
 print('\nVersion 1.0')
 start_time = time.time()    # Track execution time
-print('Start at', time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(start_time)))
+print('Start at (GMT)', time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(start_time)))
 
 # File name can be passed to this code in terminal, or use import this code as in a script (need to modify a little)
 args = sys.argv
@@ -24,6 +24,27 @@ verbose=True
 #   --input, --output, --verbose, --missing, --r2_threshold, --r2_output
 dict_flags = process_args.process_args(args) # Process terminal input
 if dict_flags['--verbose']!='true': verbose=False
+
+# Write some info into a log file
+log_fn = dict_flags['--output'] + '.log' # Save Important processing info into a .log file for user reference
+with open(log_fn, 'w') as log_fh:
+    # Write start time
+    log_fh.write('Start at (GMT)' + time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(start_time)) + '\n\n')
+    log_fh.write('Input options used:\n')
+    for k,v in dict_flags.items():
+        log_fh.write('\t'+ k+':' + str(v) + '\n')
+
+    # write info.gz file names
+    log_fh.write('\nBelow .info.gz files were used:\n')
+    for fn in dict_flags['--input']:
+        info_fn = fn.split('.dose')[0] + '.info.gz'
+        log_fh.write('\t' + info_fn + '\n')
+
+    # Write number of variants and individuals to be processed
+    log_fh.write('\nNumber of variants:\n') # Actual numbers are written in get_SNP_list.py
+    # log_fh.write('\tTotal number of all input files combined:')
+    # log_fh.write('\tNumber of saved variants:')
+    # log_fh.write('\tNumber of excluded variants:')
 
 check_r2_setting_for_imputation.check_imputatilson_parameters(lst_fn=dict_flags['--input'])
 lst_number_of_individuals = get_SNP_list.get_snp_list(dict_flags)
@@ -40,6 +61,12 @@ def print_execution_time(satrt_time):
     seconds = duration % 60
     print('\nDuration: {:.2f} hours, {:.2f} minutes, {:.2f} seconds'.format(hours, minutes, seconds))
     print('End of run')
+
+    # Write into log file
+    log_fn = dict_flags['--output'] + '.log'
+    with open(log_fn, 'w') as log_fh:
+        log_fh.write('\n\nDuration: {:.2f} hours, {:.2f} minutes, {:.2f} seconds'.format(hours, minutes, seconds))
+        log_fh.write('\n\nEnd of run')
 
 # Merge header lines of input files (.dose.vcf.gz) together
 # Parameters:

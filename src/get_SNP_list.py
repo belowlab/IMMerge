@@ -219,6 +219,14 @@ def __process_output(df_merged, dict_flags, lst_index_col_names):
                                                                                            float_format=float_format)
         print('\tNumber of saved variants:', df_merged[mask_to_keep].shape[0])
         print('\tNumber of excluded variants:', df_merged[mask_to_exclude].shape[0])
+
+        # Write important info into log file
+        log_fn = dict_flags['--output'] + '.log'  # Save Important processing info into a .log file for user reference
+        with open(log_fn, 'a') as log_fh:
+            log_fh.write('\tTotal number of all input files combined: '+str(df_merged.shape[0])+'\n')
+            log_fh.write('\tNumber of saved variants:'+str(df_merged[mask_to_keep].shape[0])+'\n')
+            log_fh.write('\tNumber of excluded variants:'+str(df_merged[mask_to_exclude].shape[0])+'\n')
+
     else:   # Use user specify allowed missingness, max value is number of input files
         # Note thresh in dropna(): Require that many non-NA values in order to not drop
         inx_to_keep = df_merged[lst_col_names].dropna(
@@ -232,8 +240,22 @@ def __process_output(df_merged, dict_flags, lst_index_col_names):
                                                                                                   float_format=float_format)
         print('\tNumber of saved variants:', len(inx_to_keep))
         print('\tNumber of excluded variants:', df_merged.drop(index=inx_to_keep).shape[0])
+
+        # Write important info into log file
+        log_fn = dict_flags['--output'] + '.log'  # Save Important processing info into a .log file for user reference
+        with open(log_fn, 'a') as log_fh:
+            log_fh.write('\tTotal number of all input files combined: '+str(df_merged.shape[0])+'\n')
+            log_fh.write('\tNumber of saved variants:'+str(len(inx_to_keep))+'\n')
+            log_fh.write('\tNumber of excluded variants:'+str(df_merged.drop(index=inx_to_keep).shape[0])+'\n')
+
     df_merged.sort_values(by=['pos', 'SNP']+lst_index_col_names)[['SNP']+lst_index_col_names].to_csv('index_'+dict_flags['--output']+'.txt',sep='\t', index=False)
     print('\nNumbers of individuals in each input file:', lst_number_of_individuals)
+
+    # Write into a log file
+    log_fn = dict_flags['--output'] + '.log'  # Save Important processing info into a .log file for user reference
+    with open(log_fn, 'a') as log_fh:
+        log_fh.write('\nNumbers of individuals in each input file: '+str(lst_number_of_individuals))
+
     return lst_number_of_individuals
 # ---------------- End opf helper functions -----------------
 

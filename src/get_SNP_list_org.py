@@ -1,3 +1,4 @@
+# Original file of get_SNP_list (archived)
 # Step 01
 # This code is to check Rsq values across all input file .info.gz
 # Create two files of variants to be excluded and kept

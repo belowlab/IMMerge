@@ -156,8 +156,8 @@ def __calculate_weighted_r2_maf_altFrq(df_merged, col_name_r2_combined, col_name
 #  - Two text files saved in current directory: variants_kept.txt and variants_excluded.txt
 def __process_output(df_merged, dict_flags, lst_index_col_names):
     # Set output file names
-    to_keep_fn = 'variants_kept_'+dict_flags['--output']+'.txt'
-    to_exclude_fn = 'variants_excluded_'+dict_flags['--output']+'.txt'
+    to_keep_fn = dict_flags['--output']+'_variants_kept.txt'
+    to_exclude_fn = dict_flags['--output']+'_variants_excluded.txt'
     missing = dict_flags['--missing']
     mask_to_keep = ''   # Use this when --missing is 0
     mask_to_exclude = ''    # Use this when --missing is 0
@@ -245,10 +245,10 @@ def __process_output(df_merged, dict_flags, lst_index_col_names):
         log_fn = dict_flags['--output'] + '.log'  # Save Important processing info into a .log file for user reference
         with open(log_fn, 'a') as log_fh:
             log_fh.write('\tTotal number of all input files combined: '+str(df_merged.shape[0])+'\n')
-            log_fh.write('\tNumber of saved variants:'+str(len(inx_to_keep))+'\n')
-            log_fh.write('\tNumber of excluded variants:'+str(df_merged.drop(index=inx_to_keep).shape[0])+'\n')
+            log_fh.write('\tNumber of saved variants: '+str(len(inx_to_keep))+'\n')
+            log_fh.write('\tNumber of excluded variants: '+str(df_merged.drop(index=inx_to_keep).shape[0])+'\n')
 
-    df_merged.sort_values(by=['pos', 'SNP']+lst_index_col_names)[['SNP']+lst_index_col_names].to_csv('index_'+dict_flags['--output']+'.txt',sep='\t', index=False)
+    df_merged.sort_values(by=['pos', 'SNP']+lst_index_col_names)[['SNP']+lst_index_col_names].to_csv(dict_flags['--output']+'_index.txt',sep='\t', index=False)
     print('\nNumbers of individuals in each input file:', lst_number_of_individuals)
 
     # Write into a log file

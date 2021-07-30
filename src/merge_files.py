@@ -17,13 +17,11 @@ print('Start at (GMT)', time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(start_tim
 
 # File name can be passed to this code in terminal, or use import this code as in a script (need to modify a little)
 args = sys.argv
-verbose=True
 
 # Process terminal input
 # dict_flags contains values for below flags:
-#   --input, --output, --verbose, --missing, --r2_threshold, --r2_output
+#   --input, --output, --thread, --missing, --r2_threshold, --r2_output
 dict_flags = process_args.process_args(args) # Process terminal input
-if dict_flags['--verbose']!='true': verbose=False
 
 # Write some info into a log file
 log_fn = dict_flags['--output'] + '.log' # Save Important processing info into a .log file for user reference
@@ -64,7 +62,7 @@ def print_execution_time(satrt_time):
 
     # Write into log file
     log_fn = dict_flags['--output'] + '.log'
-    with open(log_fn, 'w') as log_fh:
+    with open(log_fn, 'a') as log_fh:
         log_fh.write('\n\nDuration: {:.2f} hours, {:.2f} minutes, {:.2f} seconds'.format(hours, minutes, seconds))
         log_fh.write('\n\nEnd of run')
 
@@ -176,18 +174,9 @@ def merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, 
     # And replace ALT_frq, MAF and r2 values in INFO column with new values calculated from all input files
     # - ie, use these columns in variant_kept.txt file: ALT_Frq_combined, MAF_combined, Rsq_combined, Genotyped
     count = 0  # For console output
-    fh_snp_kept = open('variants_kept_'+dict_flags['--output']+'.txt')
-    print('\tvariants_kept_' + dict_flags['--output'] + '.txt file loaded')
+    fh_snp_kept = open(dict_flags['--output']+'_variants_kept.txt')
+    print('\t'+dict_flags['--output']+'_variants_kept.txt file loaded')
     fh_snp_kept.readline()  # Skip the first line (header)
-
-    # multiprocessing.set_start_method("fork")  # This is necessary for python 3.8, but won't matter in other versions
-    # # To be safe, use the max number of cores to do multi processing, unless only one core available
-    # if multiprocessing.cpu_count() == 1:
-    #     number_of_cores_to_use = 1
-    # else:
-    #     number_of_cores_to_use = multiprocessing.cpu_count() - 1
-    # with multiprocessing.Pool(number_of_cores_to_use) as p:
-    #     run_merge_files()
 
     while True:
         line_snp_kept = fh_snp_kept.readline().strip()
@@ -272,4 +261,15 @@ def run_merge_files():
     # with multiprocessing.Pool(number_of_cores_to_use) as p:
     #     run_merge_files()
 
-run_merge_files()
+# run_merge_files()
+
+multiprocessing.set_start_method("fork")  # This is necessary for python 3.8, but won't matter in other versions
+# Use user defined number of cores to do multi processing, unless not defined
+if dict_flags['--thread'] == 1: # no multiprocessing
+    run_merge_files()
+elif dict_flags['--thread'] <= multiprocessing.cpu_count():
+    number_of_cores_to_use = dict_flags['--thread']
+    with multiprocessing.Pool(number_of_cores_to_use) as p: run_merge_files()
+else:
+    number_of_cores_to_use = multiprocessing.cpu_count()
+    with multiprocessing.Pool(number_of_cores_to_use) as p: run_merge_files()

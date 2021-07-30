@@ -1,3 +1,4 @@
+# Original file of merge_files (archived)
 # Step 02
 # This code is used to merge imputed files from TopMed based on list of saved variants in prior steps
 # The goal is to combine post-imputation vcf.gz files into one vcf.gz file

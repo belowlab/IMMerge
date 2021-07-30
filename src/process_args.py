@@ -3,9 +3,10 @@
 # Possible flags are:
 # --input: (Required) input file names
 # --output: (Required) output file names without suffix (eg. BioVU_chr21)
-# --verbose: (Optional)
-#   If print out detailed information, default is true
-#   valid values: [true/True/1, false/False/not 1]
+# --thread: (Optional)
+#   Default is 1
+#   Defines how many thread to use in multiprocessing
+#   valid values: int >= 1
 # --missing: (optional, int)
 #   Defines number of missing values allowed for each variant.
 #   Default is 0. Cannot exceed total number of input files.
@@ -26,7 +27,7 @@
 #   Starting from the second input file, data of the first N individuals will be skipped in the merged output
 def process_args(args):
     # For sanity check. Only flags with names in this list are allowed
-    lst_flag_names = ['--input', '--output', '--verbose', '--missing', '--na_rep',
+    lst_flag_names = ['--input', '--output', '--thread', '--missing', '--na_rep',
                       '--r2_threshold', '--r2_output', '--duplicate_id', '--help']
     # Save flags and flag values in a dictionary
     dict_flags = dict()
@@ -96,10 +97,18 @@ def process_args(args):
         # Check --output
         if dict_flags.get('--output') is None: dict_flags['--output']='merged'
 
-        # Check --verbose
-        if dict_flags.get('--verbose') is None: dict_flags['--verbose']='true'
-        elif dict_flags['--verbose'] in ['true', 'True', '1']: dict_flags['--verbose']='true'
-        else: dict_flags['--verbose'] = 'false'
+        # Check --thread
+        if dict_flags.get('--thread') is None: dict_flags['--thread']=1
+        else:
+            try:
+                dict_flags['--thread'] = int(dict_flags['--thread'])
+            except:
+                print('Error: Invalid value of --thread:', dict_flags['--thread'])
+                print('\tValue of --thread should be an integer\n')
+                raise IOError('Invalid value of --thread')
+            # Assign 1 to --thread if user supplied a value<0
+            if dict_flags['--thread']<0: dict_flags['--thread']=1
+
 
         # Check --missing
         if dict_flags.get('--missing') is None: dict_flags['--missing'] = 0

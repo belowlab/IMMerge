@@ -1,0 +1,14 @@
+total 63536560
+-rw-r--r--   1 wanying  staff     0B Jul 18 12:23 20210718_files.log.txt
+-rw-r--r--   1 wanying  staff    28G Jul 18 12:22 merged_chr1.dose.vcf.gz
+drwxr-xr-x  12 wanying  staff   384B Jul 17 18:26 src
+-rw-r--r--   1 wanying  staff    64B Jul 17 18:12 merged_chr20.log
+-rw-r--r--   1 wanying  staff   938B Jul 17 01:38 merged_chr1.log
+-rw-r--r--   1 wanying  staff   522M Jul 17 01:38 index_merged_chr1.txt
+-rw-r--r--   1 wanying  staff   328M Jul 17 01:36 variants_excluded_merged_chr1.txt
+-rw-r--r--   1 wanying  staff   1.2G Jul 17 01:35 variants_kept_merged_chr1.txt
+-rw-r--r--   1 wanying  staff   146M Jul 17 01:23 index_merged_chr20.txt
+-rw-r--r--   1 wanying  staff    93M Jul 17 01:23 variants_excluded_merged_chr20.txt
+-rw-r--r--   1 wanying  staff   350M Jul 17 01:23 variants_kept_merged_chr20.txt
+-rw-r--r--   1 wanying  staff   4.7K Jul 16 07:29 README.md
+drwxr-xr-x  14 wanying  staff   448B Jul  8 13:09 sample_data

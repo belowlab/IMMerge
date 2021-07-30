@@ -5,7 +5,8 @@
     - Valid flags are:
         - --input: (required) files to be merged, multiple files are allowed
         - --output: (optional, default is "merged") output file name without suffix. Default value is "merged" and saved at working directory (plus appropriate suffix).
-        - --verbose: (optional) indicator of whether to print out details in console during program run. Default value is true.
+        - --thread (optional) Defines how many threads to use in multiprocessing. Default value is
+            - Valid values are integers. If number of threads > number of cpus of the system, will use number of cpus instead of user supplied value. If number of threads <0, will use 1 instead of user supplied value.
         - --missing: (optional, default is 0) Defines number of missing values allowed for each variant. Cannot exceed total number of files to be merged. If a variant is missing for some individuals, the values will be "NA" in merged output file. If --missing is 0, only variants shared by all input files will be saved in merged result.
         - -na_rep: (optional) Defines what symbol to use for missing values. Default is 'NA'. This will be ignored if --missing is 0.
         - --r2_threshold: (optional, default is 0, ie. no filtering) Only variants with imputation quality r2≥r2_threshold will be saved in the merged file

@@ -87,6 +87,7 @@ def __merge_snps(lst_info_df, cols_to_keep=['SNP', 'REF(0)', 'ALT(1)', 'Genotype
     df_merged['pos'] = df_merged['SNP'].apply(lambda x: x.split(':')[1])
     return df_merged, lst_index_col_names
 
+
 # This function calculated weighted r2 and MAF,
 # assign values to a column (col_name_r2_combined, col_name_maf_combined) in df_merged
 # Parameters:
@@ -95,7 +96,10 @@ def __merge_snps(lst_info_df, cols_to_keep=['SNP', 'REF(0)', 'ALT(1)', 'Genotype
 # - col_name_maf_combined: column name of combined minor allele frequency
 # - col_name_alt_frq: column name of combined alternative allele frequency (ALT_Frq)
 # - lst_input_fn: a list of names of input files
-def __calculate_weighted_r2_maf_altFrq(df_merged, col_name_r2_combined, col_name_maf_combined, col_name_alt_frq_combined, lst_input_fn):
+# - r2_merge_type: use value of dict_flags['--r2_output'], can be 'weighted_average', 'first' and 'mean'
+def __calculate_weighted_r2_maf_altFrq(df_merged, col_name_r2_combined,
+                                       col_name_maf_combined, col_name_alt_frq_combined,
+                                       lst_input_fn, r2_merge_type):
     lst_number_of_individuals = []  # A list to store number of individuals of each input file
     # Count number of individuals in each input file
     for fn in lst_input_fn:
@@ -117,27 +121,38 @@ def __calculate_weighted_r2_maf_altFrq(df_merged, col_name_r2_combined, col_name
     # A list to store column names of r2 * weight/r2
     # In this way weight can be adjusted to reflect missing values in r2
     lst_col_names_weight_adj = []
-
+    lst_col_r2_names=[] # Store column names of r2 from each file, such as Rsq_group1, Rsq_group2 ...
     for i in range(len(lst_input_fn)):
         col_name_r2 = 'Rsq_group'+str(i+1)
-        col_name_maf = 'MAF_group' + str(i + 1)
+        col_name_maf = 'MAF_group' + str(i+1)
         col_name_alt_frq = 'ALT_Frq_group'+str(i+1)
+        lst_col_r2_names.append(col_name_r2)
 
         # !!! Must use pd.DataFrame.sum(), mean(), etc. functions to deal with missing values (NaN)
         # Otherwise will get NaN if adding NaN to another value directly.
         df_merged[col_name_r2+'_adj'] = df_merged[col_name_r2] * lst_number_of_individuals[i] # Rsq * # individuals
         df_merged[col_name_maf+'_adj'] = df_merged[col_name_maf] * lst_number_of_individuals[i]   # MAF * # individuals
         df_merged[col_name_alt_frq + '_adj'] = df_merged[col_name_alt_frq] * lst_number_of_individuals[i]  # MAF * # individuals
-        # Weight is number of individuals
+
+        # Weight is number of individuals (but not include missing values)
+        # Code below reflect missing values by * and / the same values (Rsq)
+        # Missing values are not counted when calculate weighted Rsq, MAF and AF (so use if for all!)
         df_merged[col_name_r2 + '_weight_adj'] = lst_number_of_individuals[i] * df_merged[col_name_r2]/ df_merged[col_name_r2]
         lst_col_names_r2_adj.append(col_name_r2+'_adj')
         lst_col_names_maf_adj.append(col_name_maf + '_adj')
         lst_col_names_alt_frq_adj.append(col_name_alt_frq + '_adj')
         lst_col_names_weight_adj.append(col_name_r2 + '_weight_adj')
 
-    df_merged[col_name_alt_frq_combined] = df_merged[lst_col_names_alt_frq_adj].sum(axis=1) / sum(lst_number_of_individuals)
-    df_merged[col_name_maf_combined] = df_merged[lst_col_names_maf_adj].sum(axis=1) / sum(lst_number_of_individuals)
-    df_merged[col_name_r2_combined] = df_merged[lst_col_names_r2_adj].sum(axis=1) / df_merged[lst_col_names_weight_adj].sum(axis=1)
+    # df_merged[col_name_alt_frq_combined] = df_merged[lst_col_names_alt_frq_adj].sum(axis=1) / sum(lst_number_of_individuals)
+    # df_merged[col_name_maf_combined] = df_merged[lst_col_names_maf_adj].sum(axis=1) / sum(lst_number_of_individuals)
+    df_merged[col_name_alt_frq_combined] = df_merged[lst_col_names_alt_frq_adj].sum(axis=1) / df_merged[lst_col_names_weight_adj].sum(axis=1)
+    df_merged[col_name_maf_combined] = df_merged[lst_col_names_maf_adj].sum(axis=1) / df_merged[lst_col_names_weight_adj].sum(axis=1)
+    if r2_merge_type == 'weighted_average': # ie. dict_flags['--r2_output']=='weighted_average'
+        df_merged[col_name_r2_combined] = df_merged[lst_col_names_r2_adj].sum(axis=1) / df_merged[lst_col_names_weight_adj].sum(axis=1)
+    elif r2_merge_type == 'first': # ie. dict_flags['--r2_output']=='first'
+        df_merged[col_name_r2_combined] = df_merged['Rsq_group1']
+    else: # ie. dict_flags['--r2_output']=='mean'
+        df_merged[col_name_r2_combined] = df_merged[lst_col_r2_names].mean(axis=1)
 
     # Drop columns that are not needed in output
     df_merged.drop(labels=lst_col_names_r2_adj, axis=1, inplace=True)
@@ -196,15 +211,10 @@ def __process_output(df_merged, dict_flags, lst_index_col_names):
     col_name_r2_combined = 'Rsq_combined'
     col_name_maf_combined = 'MAF_combined'
     col_name_alt_frq_combined = 'ALT_Frq_combined'
-    if dict_flags['--r2_output'] == 'first':  # use r2 of the first input file
-        df_merged[col_name_r2_combined] = df_merged['Rsq_group1']
-    elif dict_flags['--r2_output'] == 'weighted_average':
-        lst_number_of_individuals = __calculate_weighted_r2_maf_altFrq(df_merged, col_name_r2_combined,
-                                                                       col_name_maf_combined, col_name_alt_frq_combined,
-                                                                       dict_flags['--input'])
-    else:  # Mean
-        df_merged[col_name_r2_combined] = df_merged[lst_col_names].mean(axis=1)
 
+    lst_number_of_individuals = __calculate_weighted_r2_maf_altFrq(df_merged, col_name_r2_combined,
+                                                                   col_name_maf_combined, col_name_alt_frq_combined,
+                                                                   dict_flags['--input'], dict_flags['--r2_output'])
     # Save result to output files
     float_format = '%.6f'
     if missing == 0:

@@ -47,7 +47,6 @@ with open(log_fn, 'w') as log_fh:
 check_r2_setting_for_imputation.check_imputatilson_parameters(lst_fn=dict_flags['--input'])
 lst_number_of_individuals = get_SNP_list.get_snp_list(dict_flags)
 
-
 # ----------------------- Helper functions -----------------------
 # This function prints execution time at the end of run
 def print_execution_time(satrt_time):
@@ -70,7 +69,7 @@ def print_execution_time(satrt_time):
 # Parameters:
 # - number_of_dup_id：User provided number of duplicated IDs in each sub input file
 # - fh_output: file handle of output file
-# - lst_input_fh: list of file handels of input files
+# - lst_input_fh: list of file handles of input files
 def merge_header_lines(lst_input_fh, fh_output, number_of_dup_id=dict_flags['--duplicate_id']):
     # # Read in SNPs (with corresponding combined MAF and r2) need to be kept from file
     # lst_snp, lst_alt_frq, lst_maf, lst_r2 = get_snp_and_info_lst()
@@ -91,14 +90,26 @@ def merge_header_lines(lst_input_fh, fh_output, number_of_dup_id=dict_flags['--d
             for fh in lst_input_fh[1:]:  # Read the rest file handles, but do not need to write them
                 line = fh.readline().strip()
         else:  # If column header line, then merge and write (line starts with single #)
+
+            # Add a few lines about how this file is generated (with '##')
+            extra_info_line = '\n##Merged from: '
+            for i in dict_flags['--input']: # Write input file names
+                if '/' in i: # remove directory if possible, only use file names
+                    i = i.split('/')[-1]
+                extra_info_line = extra_info_line + i + ', '
+            extra_info_line = extra_info_line[:-2] # Remove the last ', '
+            fh_output.write(extra_info_line + '\n')
+            fh_output.write('##Merged Rsq using: ' + dict_flags['--r2_output'] + '\n')
+
+
             # In current TOPMed version these are columns of shared information, then followed by individual IDs:
             #   - CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT
             inx_indiv_id_starts = line.split().index('FORMAT') + 1  # Find from which column genotype data starts
             inx_info_column = line.split().index('INFO')
-            inx_snp_id_column = line.split().index('ID')
+            # inx_snp_id_column = line.split().index('ID')
             print('\tIndividual genotype data starts from column #:', inx_indiv_id_starts + 1)
             # Create merged header line, initialize with header from the first file
-            line_to_write = '\n' + line
+            line_to_write = line
             for fh in lst_input_fh[1:]: # Read header line from rest file handles
                 line = fh.readline().strip()
                 # Set maxsplit in slit() function to remove duplicated IDs
@@ -110,15 +121,15 @@ def merge_header_lines(lst_input_fh, fh_output, number_of_dup_id=dict_flags['--d
 
     return inx_indiv_id_starts, inx_info_column
 
-# This function read line of a given file handle, until find line of given SNP
-# Return string of that line
+# This function read line of a given file handle, until find line of given SNP (by parameter snp))
+# Return string of that line (if not found then return an empty string '')
 def search_SNP_and_read_lines(snp, fh):
     inx_snp_ID = 2  # Index of column that contains variant ID such as chr21:10000777:C:A (value is 2 in 2021/07 version)
     line = fh.readline().strip()  # Read in each line to search for the given variant
-    input_snp = line.split(maxsplit=inx_snp_ID + 1)[-2]
+    # input_snp = line.split(maxsplit=inx_snp_ID + 1)[-2]
     while line != '':  # Keep read line until find given snp
         input_snp = line.split(maxsplit=inx_snp_ID + 1)[-2]
-        if input_snp == snp:
+        if input_snp == snp: # if found
             break
         else:
             line = fh.readline().strip()  # Read in each line to search for the given variant
@@ -166,7 +177,7 @@ def merge_individual_variant(snp, number_of_dup_id, inx_info_column, new_info_va
     return merged_line
 
 # This function reads in variant_kept.txt file as a reference, and merge rest of lines in input files
-# (Header lines should be handled by merge_header_lines() funciton, so they are ignored in this funciton)
+# (Header lines should be handled by merge_header_lines() function, so they are ignored in this function)
 # Merged lines are written into output file
 def merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, fh_output):
     # Load variants_kept.txt as a reference of merged file

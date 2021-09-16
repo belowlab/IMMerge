@@ -1,5 +1,5 @@
 # This function process user input from command line
-# Return parsed flags
+# Return parsed flags in a dictionary (dict_flags)
 # Possible flags are:
 # --input: (Required) input file names
 # --output: (Required) output file names without suffix (eg. BioVU_chr21)
@@ -108,7 +108,6 @@ def process_args(args):
                 raise IOError('Invalid value of --thread')
             # Assign 1 to --thread if user supplied a value<0
             if dict_flags['--thread']<0: dict_flags['--thread']=1
-
 
         # Check --missing
         if dict_flags.get('--missing') is None: dict_flags['--missing'] = 0

@@ -140,13 +140,21 @@ def search_SNP_and_read_lines(snp, fh):
 # If a snp is not found in certain input file, fill with symbol of missing values for that file
 # Missing values symbol can be any user supplied string, default is 'NA'
 # Value of INFO field is replace with new values calculated from all input files
+# Parameters:
+# - snp:
+# - number_of_dup_id: dict_flag['--duplicate_id']
+# - inx_info_column: index of INFO columns in input .dose.vcf.gz file
+# - new_info_val: new info values to replace value of the INFO column in input .dose.vcf.gz file
+# - inx_indiv_id_starts: index of the first individual ID (such as R200000348) columns in input .dose.vcf.gz file
+# - lst_alt_frq_val: a list of alt_Frq values from all input files. Use this to decide if a SNP is missing from a input file
+# - lst_input_fh: list of input file handles
 def merge_individual_variant(snp, number_of_dup_id, inx_info_column, new_info_val, inx_indiv_id_starts, lst_alt_frq_val, lst_input_fh):
     merged_line = ''
     # flag_first_na: An indicator to show whether a variant is missing from the first input file
     # If missing, need to fill info columns from other input file
     flag_first_na = False
     for i in range(len(lst_input_fh)):
-        if i == 0:  # If the first input file
+        if i == 0:  # If this is the first input file
             if lst_alt_frq_val[i] != dict_flags['--na_rep']:
                 # If this is the first input file and variant is not missing,
                 # then keep all columns including info columns
@@ -205,7 +213,7 @@ def merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, 
             # Create new INFO value to replace INFO column in merged line
             new_info_val = 'AF='+ALT_Frq_combined+';MAF='+MAF_combined+';R2='+Rsq_combined+';'+genotyped
 
-            inx_alt_frq_col = 4  # Index of ALT_frq column group1
+            inx_alt_frq_col = 4  # Index of ALT_frq column group1 (since variant_kept file is build by the program, the index can be hard coded)
             # Add ALT_frq of group2,...,groupX to each list
             for i in range(len(lst_input_fh)):
                 lst_alt_frq_val.append(lst_snp_kept[inx_alt_frq_col])

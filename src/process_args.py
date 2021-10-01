@@ -123,8 +123,9 @@ def process_args(args):
                 print('\tValue of --missing should be an integer between 0 and number of input files\n')
                 raise IOError('Invalid value of --missing')
 
-        # Check --na_rep (default is NA)
-        if dict_flags.get('--na_rep') is None: dict_flags['--na_rep'] = 'NA'
+        # Check --na_rep
+        # Default is .|. as VCFs uses "." to represent missing values, trailing fields after missing genotyoe can be ignored
+        if dict_flags.get('--na_rep') is None: dict_flags['--na_rep'] = '.|.'
 
         # Check --r2_threshold (default is 0.1)
         if dict_flags.get('--r2_threshold') is None: dict_flags['--r2_threshold'] = 0

@@ -10,6 +10,7 @@ import get_SNP_list
 import check_r2_setting_for_imputation
 import time
 import multiprocessing
+import bgzip # vcf.gz file is actually bgzip file not gzip file, but can be opened with gzip
 
 print('\nVersion 1.0')
 start_time = time.time()    # Track execution time
@@ -65,32 +66,35 @@ def print_execution_time(satrt_time):
         log_fh.write('\n\nDuration: {:.2f} hours, {:.2f} minutes, {:.2f} seconds'.format(hours, minutes, seconds))
         log_fh.write('\n\nEnd of run')
 
-# Merge header lines of input files (.dose.vcf.gz) together
+# Merge header lines of input files (.dose.vcf.gz) together and write into a BGZF file (bgzip file)
 # Parameters:
 # - number_of_dup_id：User provided number of duplicated IDs in each sub input file
-# - fh_output: file handle of output file
+# - fh_output_raw: file handle of output file (need to use bgzip module for actual writing)
 # - lst_input_fh: list of file handles of input files
-def merge_header_lines(lst_input_fh, fh_output, number_of_dup_id=dict_flags['--duplicate_id']):
+def merge_header_lines(lst_input_fh, fh_output_raw, number_of_dup_id=dict_flags['--duplicate_id']):
     # # Read in SNPs (with corresponding combined MAF and r2) need to be kept from file
     # lst_snp, lst_alt_frq, lst_maf, lst_r2 = get_snp_and_info_lst()
 
     # Read trough header lines (line start with ##) and write into output file
     # Process all files at the same time. All input files should have the same number of header lines
+    fh_output = bgzip.BGZipWriter(fh_output_raw) # To write as a BGZF file. Gzip can open this file type.
     line = ''
     for fh in lst_input_fh:  # Read the 1st line of all input files
         line = fh.readline().strip()
-    fh_output.write(line)
+
+    # Use encode() to convert string to byte
+    # This is to make sure bgzip module works, since it uses bytearray to write
+    fh_output.write(line.encode())
     line = lst_input_fh[0].readline().strip()  # Read the 2nd line of the first input files
 
     inx_indiv_id_starts = 0  # From which column genotype data starts
     inx_info_column = 0 # Find index of column "INFO", in order to replace values later
     while line[0] == '#': # Info and header lines all start with "#"
         if line[0:2] == '##':  # If Info lines, write everything directly
-            fh_output.write('\n' + line)
+            fh_output.write(('\n' + line).encode())
             for fh in lst_input_fh[1:]:  # Read the rest file handles, but do not need to write them
                 line = fh.readline().strip()
         else:  # If column header line, then merge and write (line starts with single #)
-
             # Add a few lines about how this file is generated (with '##')
             extra_info_line = '\n##Merged from: '
             for i in dict_flags['--input']: # Write input file names
@@ -98,9 +102,8 @@ def merge_header_lines(lst_input_fh, fh_output, number_of_dup_id=dict_flags['--d
                     i = i.split('/')[-1]
                 extra_info_line = extra_info_line + i + ', '
             extra_info_line = extra_info_line[:-2] # Remove the last ', '
-            fh_output.write(extra_info_line + '\n')
-            fh_output.write('##Merged Rsq using: ' + dict_flags['--r2_output'] + '\n')
-
+            fh_output.write((extra_info_line + '\n').encode())
+            fh_output.write(('##Merged Rsq using: ' + dict_flags['--r2_output'] + '\n').encode())
 
             # In current TOPMed version these are columns of shared information, then followed by individual IDs:
             #   - CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT
@@ -114,7 +117,7 @@ def merge_header_lines(lst_input_fh, fh_output, number_of_dup_id=dict_flags['--d
                 line = fh.readline().strip()
                 # Set maxsplit in slit() function to remove duplicated IDs
                 line_to_write = line_to_write + '\t' + line.split(maxsplit=number_of_dup_id + inx_indiv_id_starts)[-1]
-            fh_output.write(line_to_write + '\n')
+            fh_output.write((line_to_write + '\n').encode())
             break
 
         line = lst_input_fh[0].readline().strip()  # Read line of the first file to decide what to do
@@ -226,8 +229,8 @@ def merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, 
             merged_line = merge_individual_variant(snp, dict_flags['--duplicate_id'], inx_info_column, new_info_val,
                                                    inx_indiv_id_starts, lst_alt_frq_val, lst_input_fh)
             # Write merged line to output file
-            fh_output.write(merged_line)
-            fh_output.write('\n')
+            fh_output.write(merged_line.encode())
+            fh_output.write('\n'.encode())
 
             # Keep console busy
             count += 1
@@ -251,22 +254,23 @@ def run_merge_files():
     lst_input_fh = []  # a list to store file handles of input files
     for fn in lst_input_fn: lst_input_fh.append(gzip.open(fn, 'rt'))
     # File handle for output
-    output_fn = dict_flags['--output'] + '.dose.vcf.gz'
-    fh_output = gzip.open(output_fn, 'wt')  # Open for writing (appending)
+    # output_fn = dict_flags['--output'] + '.dose.vcf.gz' # Do not always need this dose suffix
+    output_fn = dict_flags['--output'] + '.vcf.gz'
+    fh_output_raw = open(output_fn, 'wb')  # Open for writing (appending), use bgzip module later to write
 
-    # 2. Merge header lines (row 0-18 in this version (2021/07,v1))
+    # 2. Merge header lines and write to output file (row 0-18 in this version (2021/07,v1))
     # Also Get index number of some columns:
     # - inx_indiv_id_starts: index of the first individual ID (such as R200000348) columns in input .dose.vcf.gz file
     # - inx_info_column: index of INFO columns in input .dose.vcf.gz file
     # - inx_snp_id_column: index of ID columns in input .dose.vcf.gz file
-    inx_indiv_id_starts, inx_info_column = merge_header_lines(lst_input_fh, fh_output)
+    inx_indiv_id_starts, inx_info_column = merge_header_lines(lst_input_fh, fh_output_raw)
     print('\tMerged header lines (lines start with #)')
 
     # 3. Merge rest lines (from row 19 in this version (2021/07,v1))
     # Merge files, close file handles when done
-    merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, fh_output)
+    merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, fh_output_raw)
     for fh in lst_input_fh: fh.close()
-    fh_output.close()
+    fh_output_raw.close()
 
     # Print out execution time
     print_execution_time(start_time)
@@ -282,13 +286,14 @@ def run_merge_files():
 
 # run_merge_files()
 
-multiprocessing.set_start_method("fork")  # This is necessary for python 3.8, but won't matter in other versions
-# Use user defined number of cores to do multi processing, unless not defined
-if dict_flags['--thread'] == 1: # no multiprocessing
-    run_merge_files()
-elif dict_flags['--thread'] <= multiprocessing.cpu_count():
-    number_of_cores_to_use = dict_flags['--thread']
-    with multiprocessing.Pool(number_of_cores_to_use) as p: run_merge_files()
-else:
-    number_of_cores_to_use = multiprocessing.cpu_count()
-    with multiprocessing.Pool(number_of_cores_to_use) as p: run_merge_files()
+if __name__ == '__main__':
+    multiprocessing.set_start_method("fork")  # This is necessary for python 3.8, but won't matter in other versions
+    # Use user defined number of cores to do multi processing, unless not defined
+    if dict_flags['--thread'] == 1: # no multiprocessing
+        run_merge_files()
+    elif dict_flags['--thread'] <= multiprocessing.cpu_count():
+        number_of_cores_to_use = dict_flags['--thread']
+        with multiprocessing.Pool(number_of_cores_to_use) as p: run_merge_files()
+    else:
+        number_of_cores_to_use = multiprocessing.cpu_count()
+        with multiprocessing.Pool(number_of_cores_to_use) as p: run_merge_files()

@@ -1,4 +1,5 @@
 .DS_Store
+merge_files_gzip.py
 src/chr21_test.dose.vcf.gz
 sample_data/
 sample_output/

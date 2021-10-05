@@ -14,7 +14,7 @@
             - Valid values are integers. If number of threads > number of cpus of the system, will use number of cpus instead of user supplied value. If number of threads <0, will use 1 instead of user supplied value.
         - --missing: (optional, default is 0) Defines number of missing values allowed for each variant. Cannot exceed total number of files to be merged. If a variant is missing for some individuals, the values will be ".|." (or other user supplied value with --na_rep as "na_rep|na_rep") in merged output file. If --missing is 0, only variants shared by all input files will be saved in merged result.
         - --na_rep: (optional) Defines what symbol to use for missing values. Default is ".". This flag is ignored if --missing is 0.
-        - --r2_threshold: (optional, default is 0, ie. no filtering) Only variants with imputation quality r2≥r2_threshold will be saved in the merged file
+        - --r2_threshold: (optional, default is 0, ie. no filtering) Only variants with combined imputation quality r2_combined≥r2_threshold will be saved in the merged file
         - --r2_output: (optional, default is "first") defines how r2 is calculated in the output file. Valid values are:
             - first: output r2 from the first file. In order to use this setting and avoid missing r2, "--missing" must be 0.
             - weighted_average: calculated weighted average of r2. Weight is determined by number of individuals of each file.

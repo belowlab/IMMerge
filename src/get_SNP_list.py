@@ -88,7 +88,7 @@ def __merge_snps(lst_info_df, cols_to_keep=['SNP', 'REF(0)', 'ALT(1)', 'Genotype
     return df_merged, lst_index_col_names
 
 
-# This function calculated weighted r2 and MAF,
+# This function calculated r2 (use method defined by dict_flags['--r2_output'])， MAF, and altFrq,
 # assign values to a column (col_name_r2_combined, col_name_maf_combined) in df_merged
 # Parameters:
 # - df_merged: merged dataframe from all .info.gz files
@@ -96,10 +96,11 @@ def __merge_snps(lst_info_df, cols_to_keep=['SNP', 'REF(0)', 'ALT(1)', 'Genotype
 # - col_name_maf_combined: column name of combined minor allele frequency
 # - col_name_alt_frq: column name of combined alternative allele frequency (ALT_Frq)
 # - lst_input_fn: a list of names of input files
-# - r2_merge_type: use value of dict_flags['--r2_output'], can be 'weighted_average', 'first' and 'mean'
-def __calculate_weighted_r2_maf_altFrq(df_merged, col_name_r2_combined,
-                                       col_name_maf_combined, col_name_alt_frq_combined,
-                                       lst_input_fn, r2_merge_type):
+# - r2_merge_type: use value of dict_flags['--r2_output'], can be 'weighted_average', 'first', 'mean', 'min' and 'max'
+#                  Defines how Rsq is calculated
+def __calculate_r2_maf_altFrq(df_merged, col_name_r2_combined,
+                              col_name_maf_combined, col_name_alt_frq_combined,
+                              lst_input_fn, r2_merge_type):
     lst_number_of_individuals = []  # A list to store number of individuals of each input file
     # Count number of individuals in each input file
     for fn in lst_input_fn:
@@ -143,16 +144,18 @@ def __calculate_weighted_r2_maf_altFrq(df_merged, col_name_r2_combined,
         lst_col_names_alt_frq_adj.append(col_name_alt_frq + '_adj')
         lst_col_names_weight_adj.append(col_name_r2 + '_weight_adj')
 
-    # df_merged[col_name_alt_frq_combined] = df_merged[lst_col_names_alt_frq_adj].sum(axis=1) / sum(lst_number_of_individuals)
-    # df_merged[col_name_maf_combined] = df_merged[lst_col_names_maf_adj].sum(axis=1) / sum(lst_number_of_individuals)
     df_merged[col_name_alt_frq_combined] = df_merged[lst_col_names_alt_frq_adj].sum(axis=1) / df_merged[lst_col_names_weight_adj].sum(axis=1)
     df_merged[col_name_maf_combined] = df_merged[lst_col_names_maf_adj].sum(axis=1) / df_merged[lst_col_names_weight_adj].sum(axis=1)
     if r2_merge_type == 'weighted_average': # ie. dict_flags['--r2_output']=='weighted_average'
         df_merged[col_name_r2_combined] = df_merged[lst_col_names_r2_adj].sum(axis=1) / df_merged[lst_col_names_weight_adj].sum(axis=1)
     elif r2_merge_type == 'first': # ie. dict_flags['--r2_output']=='first'
         df_merged[col_name_r2_combined] = df_merged['Rsq_group1']
-    else: # ie. dict_flags['--r2_output']=='mean'
+    elif r2_merge_type == 'mean':
         df_merged[col_name_r2_combined] = df_merged[lst_col_r2_names].mean(axis=1)
+    elif r2_merge_type == 'min':  # ie. dict_flags['--r2_output']=='min'
+        df_merged[col_name_r2_combined] = df_merged[lst_col_r2_names].min(axis=1)
+    else:  # ie. dict_flags['--r2_output']=='max'
+        df_merged[col_name_r2_combined] = df_merged[lst_col_r2_names].max(axis=1)
 
     # Drop columns that are not needed in output
     df_merged.drop(labels=lst_col_names_r2_adj, axis=1, inplace=True)
@@ -212,9 +215,9 @@ def __process_output(df_merged, dict_flags, lst_index_col_names):
     col_name_maf_combined = 'MAF_combined'
     col_name_alt_frq_combined = 'ALT_Frq_combined'
 
-    lst_number_of_individuals = __calculate_weighted_r2_maf_altFrq(df_merged, col_name_r2_combined,
-                                                                   col_name_maf_combined, col_name_alt_frq_combined,
-                                                                   dict_flags['--input'], dict_flags['--r2_output'])
+    lst_number_of_individuals = __calculate_r2_maf_altFrq(df_merged, col_name_r2_combined,
+                                                          col_name_maf_combined, col_name_alt_frq_combined,
+                                                          dict_flags['--input'], dict_flags['--r2_output'])
     # Save result to output files
     float_format = '%.6f'
     if missing == 0:

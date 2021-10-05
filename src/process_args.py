@@ -124,8 +124,9 @@ def process_args(args):
                 raise IOError('Invalid value of --missing')
 
         # Check --na_rep
-        # Default is .|. as VCFs uses "." to represent missing values, trailing fields after missing genotyoe can be ignored
-        if dict_flags.get('--na_rep') is None: dict_flags['--na_rep'] = '.|.'
+        # Default is . as VCFs uses "." to represent missing values, trailing fields after missing genotyoe can be ignored
+        # In the output VCF, missing genotype field is ".|.", other fileds are "."
+        if dict_flags.get('--na_rep') is None: dict_flags['--na_rep'] = '.'
 
         # Check --r2_threshold (default is 0)
         if dict_flags.get('--r2_threshold') is None: dict_flags['--r2_threshold'] = 0
@@ -145,7 +146,7 @@ def process_args(args):
         # Check --r2_output
         if dict_flags.get('--r2_output') is None: dict_flags['--r2_output']='first'
         else:
-            if dict_flags['--r2_output'] not in ['first', 'weighted_average', 'mean']:
+            if dict_flags['--r2_output'] not in ['first', 'weighted_average', 'mean', 'min', 'max']:
                 print('Error: Invalid value of --r2_output:', dict_flags['--r2_output'])
                 print('Value of --r2_output should be: first, weighted_average or mean\n')
                 raise IOError('Invalid value of --r2_output')

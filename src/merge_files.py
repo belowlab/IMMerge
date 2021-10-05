@@ -31,12 +31,12 @@ with open(log_fn, 'w') as log_fh:
     log_fh.write('Start at (GMT)' + time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(start_time)) + '\n\n')
     log_fh.write('Input options used:\n')
     for k,v in dict_flags.items():
-        log_fh.write('\t'+ k+':' + str(v) + '\n')
+        log_fh.write('\t'+ k+': ' + str(v) + '\n')
 
     # write info.gz file names
     log_fh.write('\nBelow .info.gz files were used:\n')
     for fn in dict_flags['--input']:
-        info_fn = fn.split('.dose')[0] + '.info.gz'
+        info_fn = fn.split('.')[0] + '.info.gz'
         log_fh.write('\t' + info_fn + '\n')
 
     # Write number of variants and individuals to be processed
@@ -71,13 +71,12 @@ def print_execution_time(satrt_time):
 # - number_of_dup_id：User provided number of duplicated IDs in each sub input file
 # - fh_output_raw: file handle of output file (need to use bgzip module for actual writing)
 # - lst_input_fh: list of file handles of input files
-def merge_header_lines(lst_input_fh, fh_output_raw, number_of_dup_id=dict_flags['--duplicate_id']):
+def merge_header_lines(lst_input_fh, fh_output, number_of_dup_id=dict_flags['--duplicate_id']):
     # # Read in SNPs (with corresponding combined MAF and r2) need to be kept from file
     # lst_snp, lst_alt_frq, lst_maf, lst_r2 = get_snp_and_info_lst()
 
     # Read trough header lines (line start with ##) and write into output file
     # Process all files at the same time. All input files should have the same number of header lines
-    fh_output = bgzip.BGZipWriter(fh_output_raw) # To write as a BGZF file. Gzip can open this file type.
     line = ''
     for fh in lst_input_fh:  # Read the 1st line of all input files
         line = fh.readline().strip()
@@ -96,14 +95,16 @@ def merge_header_lines(lst_input_fh, fh_output_raw, number_of_dup_id=dict_flags[
                 line = fh.readline().strip()
         else:  # If column header line, then merge and write (line starts with single #)
             # Add a few lines about how this file is generated (with '##')
-            extra_info_line = '\n##Merged from: '
+            extra_info_line = '\n##Merge_Input files='
             for i in dict_flags['--input']: # Write input file names
                 if '/' in i: # remove directory if possible, only use file names
                     i = i.split('/')[-1]
                 extra_info_line = extra_info_line + i + ', '
             extra_info_line = extra_info_line[:-2] # Remove the last ', '
             fh_output.write((extra_info_line + '\n').encode())
-            fh_output.write(('##Merged Rsq using: ' + dict_flags['--r2_output'] + '\n').encode())
+            fh_output.write(('##Merge_Missing=' + str(dict_flags['--missing']) + '\n').encode())
+            fh_output.write(('##Merge_Merged Rsq=' + dict_flags['--r2_output'] + '\n').encode())
+            fh_output.write(('##Merge_Rsq filter=' + str(dict_flags['--r2_threshold']) + '\n').encode())
 
             # In current TOPMed version these are columns of shared information, then followed by individual IDs:
             #   - CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT
@@ -257,19 +258,21 @@ def run_merge_files():
     # output_fn = dict_flags['--output'] + '.dose.vcf.gz' # Do not always need this dose suffix
     output_fn = dict_flags['--output'] + '.vcf.gz'
     fh_output_raw = open(output_fn, 'wb')  # Open for writing (appending), use bgzip module later to write
+    fh_output = bgzip.BGZipWriter(fh_output_raw)
 
     # 2. Merge header lines and write to output file (row 0-18 in this version (2021/07,v1))
     # Also Get index number of some columns:
     # - inx_indiv_id_starts: index of the first individual ID (such as R200000348) columns in input .dose.vcf.gz file
     # - inx_info_column: index of INFO columns in input .dose.vcf.gz file
     # - inx_snp_id_column: index of ID columns in input .dose.vcf.gz file
-    inx_indiv_id_starts, inx_info_column = merge_header_lines(lst_input_fh, fh_output_raw)
+    inx_indiv_id_starts, inx_info_column = merge_header_lines(lst_input_fh, fh_output)
     print('\tMerged header lines (lines start with #)')
 
     # 3. Merge rest lines (from row 19 in this version (2021/07,v1))
     # Merge files, close file handles when done
-    merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, fh_output_raw)
+    merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, fh_output)
     for fh in lst_input_fh: fh.close()
+    fh_output.close()
     fh_output_raw.close()
 
     # Print out execution time

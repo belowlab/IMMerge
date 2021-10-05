@@ -204,10 +204,10 @@ def __process_output(df_merged, dict_flags, lst_index_col_names):
                 mask_to_keep = mask_to_keep & (df_merged[col_name_r2] >= dict_flags['--r2_threshold'])
                 mask_to_exclude = mask_to_exclude | (df_merged[col_name_r2] < dict_flags['--r2_threshold'])
 
-        lst_col_names.append(col_name_r2)  # Save column names of MAF_group1, MAF_group2, etc.
+        lst_col_names.append(col_name_r2)  # Save column names of Rsq_group1, Rsq_group2, etc.
 
     # Calculate combined r2 (first, weighted_average or mean)
-    lst_number_of_individuals = []  # Print this info if '--r2_output' is 'weighted_average':
+    # lst_number_of_individuals = []  # Print this info if '--r2_output' is 'weighted_average':
     col_name_r2_combined = 'Rsq_combined'
     col_name_maf_combined = 'MAF_combined'
     col_name_alt_frq_combined = 'ALT_Frq_combined'
@@ -238,25 +238,31 @@ def __process_output(df_merged, dict_flags, lst_index_col_names):
             log_fh.write('\tNumber of excluded variants:'+str(df_merged[mask_to_exclude].shape[0])+'\n')
 
     else:   # Use user specify allowed missingness, max value is number of input files
-        # Note thresh in dropna(): Require that many non-NA values in order to not drop
-        inx_to_keep = df_merged[lst_col_names].dropna(
-            thresh=len(dict_flags['--input']) - dict_flags['--missing']).index
-        df_merged.iloc[inx_to_keep, :].sort_values(by=['pos', 'SNP'])\
-            .drop(columns=lst_index_col_names+['pos'])\
-            .to_csv(to_keep_fn,index=False, sep='\t', na_rep=dict_flags['--na_rep'], float_format=float_format)
-        df_merged.drop(index=inx_to_keep).drop(columns=lst_index_col_names+['pos']).to_csv(to_exclude_fn,
-                                                                                                  index=False, sep='\t',
-                                                                                                  na_rep=dict_flags['--na_rep'],
-                                                                                                  float_format=float_format)
-        print('\tNumber of saved variants:', len(inx_to_keep))
-        print('\tNumber of excluded variants:', df_merged.drop(index=inx_to_keep).shape[0])
+        # Calculate number of missing files (by number of NA value of Rsq column)
+        df_merged['missing'] = df_merged[lst_col_names].isna().sum(axis=1)
+
+        # Filter by dict_flags['--r2_threshold'], if merged Rsq>=dict_flags['--r2_threshold'] then keep this variant
+        # Also filter by number of missing files (dict_flags['--missing'])
+        mask_to_keep = (df_merged['missing']<=dict_flags['--missing']) & \
+                       (df_merged[col_name_r2_combined]>=dict_flags['--r2_threshold'])
+        mask_to_exclude = (df_merged['missing']>dict_flags['--missing']) | \
+                          (df_merged[col_name_r2_combined]<dict_flags['--r2_threshold'])
+
+        df_merged.loc[mask_to_keep].sort_values(by=['pos', 'SNP'])\
+                .drop(columns=lst_index_col_names+['pos', 'missing'])\
+                .to_csv(to_keep_fn, index=False, sep='\t', na_rep=dict_flags['--na_rep'], float_format=float_format)
+        df_merged.loc[mask_to_exclude].drop(columns=lst_index_col_names+['pos', 'missing'])\
+            .to_csv(to_exclude_fn, index=False, sep='\t', na_rep=dict_flags['--na_rep'], float_format=float_format)
+
+        print('\tNumber of saved variants:', df_merged.loc[mask_to_keep].shape[0])
+        print('\tNumber of excluded variants:', df_merged.loc[mask_to_exclude].shape[0])
 
         # Write important info into log file
         log_fn = dict_flags['--output'] + '.log'  # Save Important processing info into a .log file for user reference
         with open(log_fn, 'a') as log_fh:
             log_fh.write('\tTotal number of all input files combined: '+str(df_merged.shape[0])+'\n')
-            log_fh.write('\tNumber of saved variants: '+str(len(inx_to_keep))+'\n')
-            log_fh.write('\tNumber of excluded variants: '+str(df_merged.drop(index=inx_to_keep).shape[0])+'\n')
+            log_fh.write('\tNumber of saved variants: '+str(df_merged.loc[mask_to_keep].shape[0])+'\n')
+            log_fh.write('\tNumber of excluded variants: '+str(df_merged.loc[mask_to_exclude].shape[0])+'\n')
 
     df_merged.sort_values(by=['pos', 'SNP']+lst_index_col_names)[['SNP']+lst_index_col_names].to_csv(dict_flags['--output']+'_index.txt',sep='\t', index=False)
     print('\nNumbers of individuals in each input file:', lst_number_of_individuals)

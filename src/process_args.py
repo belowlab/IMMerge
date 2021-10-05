@@ -117,7 +117,7 @@ def process_args(args):
             except:
                 print('Error: Invalid value of --missing:', dict_flags['--missing'])
                 print('\tValue of --missing should be an integer\n')
-                raise IOError('Invalid value of --missing')
+                raise IOError('Invalid value of -cat ../ou  -missing')
             if dict_flags['--missing'] < 0 or dict_flags['--missing'] > len(dict_flags['--input']):
                 print('Error: Invalid value of --missing:', dict_flags['--missing'])
                 print('\tValue of --missing should be an integer between 0 and number of input files\n')
@@ -127,7 +127,7 @@ def process_args(args):
         # Default is .|. as VCFs uses "." to represent missing values, trailing fields after missing genotyoe can be ignored
         if dict_flags.get('--na_rep') is None: dict_flags['--na_rep'] = '.|.'
 
-        # Check --r2_threshold (default is 0.1)
+        # Check --r2_threshold (default is 0)
         if dict_flags.get('--r2_threshold') is None: dict_flags['--r2_threshold'] = 0
         else:
             try:

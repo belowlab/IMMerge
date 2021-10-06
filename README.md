@@ -34,11 +34,14 @@
 4. Calculation of combined r2 and MAF
     1. r2
         1.1 Mean:
-            $$r^2_{combined} = \frac{\sum_{i=1}^{n} r^2_{i}}{n}$$
+        ```math
+	r^2_{combined} = \frac{\sum_{i=1}^{n} r^2_{i}}{n}
+	```
+            
             - $r^2_i$: Imputation quality $r^2$ of the $i$th input file
             - $n$: Total number of input files to be merged
 	    - ignore missing values in calculation
-        2. Weighted average, **ignore NAs**
+        1.2 Weighted average, **ignore NAs**
             $$r^2_{combined} = \frac{\sum_{i=1}^{n}r_i^2 * N_i}{\sum_{i=1}^{n}N_i}$$
             - $r^2_i$: Imputation quality $r^2$ of the $i$th input file
             - $n$: Total number of input files to be merged
@@ -58,5 +61,9 @@
             - Weight MAF = (0.2*1000 + 0.1*3000)/(1000 + 2000 + 3000) = 0.083
 5. Example code using sample data in ./data_sample/, output files saved in ./output_sample/
 ```
-python merge_files.py --input ../data_sample/sample_group1.dose.vcf.gz ../data_sample/sample_group2.dose.vcf.gz ../data_sample/sample_group3.dose.vcf.gz --output ../output_sample/merged_sample --missing 1 --duplicate_id 5 --r2_output weighted_average
+python merge_files.py --input ../data_sample/sample_group1.dose.vcf.gz ../data_sample/sample_group2.dose.vcf.gz ../data_sample/sample_group3.dose.vcf.gz \
+		      --output ../output_sample/merged_sample \
+		      --missing 1 \
+		      --duplicate_id 5 \
+		      --r2_output weighted_average
 ```

@@ -51,7 +51,7 @@
 1. All input files should be bgzipped, post-imputation VCF files from TOMed, with name as [file_name].vcf.gz
 2. Input vcf.gz files should be sorted by position (looks like TOPMed output is sorted by default, so this should not be not a problem)
 3. Corresponding gzipped info files should be stored in the same directory as [file_name].info.gz
-4. All input dose.vcf.gz files should have the same number of header lines (ie. lines start with "##")
+4. All input .vcf.gz files should have the same number of header lines (ie. lines start with "##")
 5. Do not move or modify variants_excluded.txt and variants_kept.txt until current run is finished.
 6. Output files will be overwritten if another run saves output in the same directory with the same file names.
 7. Value smaller than 0.000001 (6 digits of precision) will be rounded to 0 when outputting ALT_frq, MAF and R2 into variant_kept.txt and variant_excluded.txt. These values will also be used to replace INFO column in merged dose.vcf.gz file. Precision can be changed with float_format parameter in get_SNP_list.py.

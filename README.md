@@ -2,8 +2,8 @@
 1. Required packages and versions
     1. This project is built with python 3.7.x
     2. Packages that might need manual installation: pandas, bgzip
-        1. To install missing packages use: pip install package_name
-        2. For example: pip install bgzip
+        1. To install missing packages use: ```pip install package_name```
+        2. For example: ```pip install bgzip```
 
 2. Arguments (flags)
     - The whole program will be used in command line with user input flags and values

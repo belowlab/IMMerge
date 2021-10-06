@@ -34,10 +34,7 @@
 4. Calculation of combined r2 and MAF
     1. r2
         1.1 Mean:
-        ```math
-	r^2_{combined} = \frac{\sum_{i=1}^{n} r^2_{i}}{n}
-	```
-            
+	    $$r^2_{combined} = \frac{\sum_{i=1}^{n} r^2_{i}}{n}$$
             - $r^2_i$: Imputation quality $r^2$ of the $i$th input file
             - $n$: Total number of input files to be merged
 	    - ignore missing values in calculation

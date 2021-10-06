@@ -49,7 +49,7 @@
                 - Weight MAF = (0.3*1000 + 0.2*3000)/(1000 + 3000) = 0.225
     2. MAF: weighted average, **include NAs:** Use the same equation as r2
         $$MAF_{combined} = \frac{\sum_{i=1}^{n}MAF_i * N_i}{\sum_{i=1}^{n}N_i}$$ 
-        - $`r^2_i`$: Imputation quality $r^2$ of the $i$th input file
+        - $r^2_i$: Imputation quality $r^2$ of the $i$th input file
         - $n$: Total number of input files to be merged
         - **Include missing values** when calculate total number of individuals. For example, a variant has below frequencies in each input file:
             - File #1: MAF=0.2, number of individuals = 1000
@@ -57,6 +57,6 @@
             - File #3: MAF=0.1, number of individuals = 3000
             - Weight MAF = (0.2*1000 + 0.1*3000)/(1000 + 2000 + 3000) = 0.083
 5. Example code using sample data in ./data_sample/, output files saved in ./output_sample/
-'''
+```
 python merge_files.py --input ../data_sample/sample_group1.dose.vcf.gz ../data_sample/sample_group2.dose.vcf.gz ../data_sample/sample_group3.dose.vcf.gz --output ../output_sample/merged_sample --missing 1 --duplicate_id 5 --r2_output weighted_average
-'''
+```

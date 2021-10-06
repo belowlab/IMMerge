@@ -6,7 +6,7 @@
 	1. To install missing packages use: ```pip install package_name```
 	2. For example: ```pip install bgzip```
 
-## Arguments (flags)
+## Arguments
 1. The program is designed to be used in command line with user input flags and values
 2. Valid flags are:
 	* --input: (required) files to be merged, multiple files are allowed

@@ -126,7 +126,7 @@ def process_args(args):
         # Check --na_rep
         # Default is . as VCFs uses "." to represent missing values, trailing fields after missing genotyoe can be ignored
         # In the output VCF, missing genotype field is ".|.", other fileds are "."
-        if dict_flags.get('--na_rep') is None: dict_flags['--na_rep'] = '.|.'
+        if dict_flags.get('--na_rep') is None: dict_flags['--na_rep'] = '.'
 
         # Check --r2_threshold (default is 0)
         if dict_flags.get('--r2_threshold') is None: dict_flags['--r2_threshold'] = 0

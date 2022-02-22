@@ -14,7 +14,7 @@ import bgzip # vcf.gz file is actually bgzip file not gzip file, but can be open
 
 print('\nVersion 1.0')
 start_time = time.time()    # Track execution time
-print('Start at (GMT)', time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(start_time)))
+print('Job starts at (local time) ', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_time)))
 
 # File name can be passed to this code in terminal, or use import this code as in a script (need to modify a little)
 args = sys.argv
@@ -28,7 +28,7 @@ dict_flags = process_args.process_args(args) # Process terminal input
 log_fn = dict_flags['--output'] + '.log' # Save Important processing info into a .log file for user reference
 with open(log_fn, 'w') as log_fh:
     # Write start time
-    log_fh.write('Start at (GMT)' + time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(start_time)) + '\n\n')
+    log_fh.write('Job starts at (local time) ' + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_time)) + '\n\n')
     log_fh.write('Input options used:\n')
     for k,v in dict_flags.items():
         log_fh.write('\t'+ k+': ' + str(v) + '\n')
@@ -36,7 +36,7 @@ with open(log_fn, 'w') as log_fh:
     # write info.gz file names
     log_fh.write('\nBelow .info.gz files were used:\n')
     for fn in dict_flags['--input']:
-        info_fn = fn.split('.')[0] + '.info.gz'
+        info_fn = fn.split('/')[-1].split('.')[0] + '.info.gz'
         log_fh.write('\t' + info_fn + '\n')
 
     # Write number of variants and individuals to be processed
@@ -95,16 +95,19 @@ def merge_header_lines(lst_input_fh, fh_output, number_of_dup_id=dict_flags['--d
                 line = fh.readline().strip()
         else:  # If column header line, then merge and write (line starts with single #)
             # Add a few lines about how this file is generated (with '##')
-            extra_info_line = '\n##Merge_Input files='
+            extra_info_line = '\n##VCFmerge=<Input files='
             for i in dict_flags['--input']: # Write input file names
                 if '/' in i: # remove directory if possible, only use file names
                     i = i.split('/')[-1]
                 extra_info_line = extra_info_line + i + ', '
-            extra_info_line = extra_info_line[:-2] # Remove the last ', '
+            extra_info_line = extra_info_line[:-2]+'>' # Remove the last ', '
             fh_output.write((extra_info_line + '\n').encode())
-            fh_output.write(('##Merge_Missing=' + str(dict_flags['--missing']) + '\n').encode())
-            fh_output.write(('##Merge_Merged Rsq=' + dict_flags['--r2_output'] + '\n').encode())
-            fh_output.write(('##Merge_Rsq filter=' + str(dict_flags['--r2_threshold']) + '\n').encode())
+            fh_output.write(('##VCFmerge=<Date=' + time.strftime('%a, %d %b %Y %H:%M:%S', time.localtime()) + '>\n').encode())
+            fh_output.write(('##VCFmerge=<Missing=' + str(dict_flags['--missing']) + ', duplicate_id='+str(dict_flags['--duplicate_id'])+'>\n').encode())
+            # fh_output.write(('##VCFmerge=<Rsq filter=' + str(dict_flags['--r2_threshold']) + '>\n').encode())
+            fh_output.write(('##VCFmerge=<Merged MAF=weighted average, Merged AF=weighted average>\n').encode())
+            fh_output.write(('##VCFmerge=<Merged Rsq=' + dict_flags['--r2_output'] + ', Rsq filter=' + str(
+                dict_flags['--r2_threshold']) + '>\n+').encode())
 
             # In current TOPMed version these are columns of shared information, then followed by individual IDs:
             #   - CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT
@@ -168,7 +171,9 @@ def merge_individual_variant(snp, number_of_dup_id, inx_info_column, new_info_va
             else:
                 # If variant is missing from the file, then fill with '.|.' (missing genotype) and exclude the first few info columns
                 # Need to get values of info columns from other input files
-                merged_line = '\t'.join([dict_flags['--na_rep']+'|'+dict_flags['--na_rep'] for j in range(lst_number_of_individuals[i])])
+                # merged_line = '\t'.join([dict_flags['--na_rep']+'|'+dict_flags['--na_rep'] for j in range(lst_number_of_individuals[i])])
+                merged_line = '\t'.join([dict_flags['--na_rep'] + '|' + dict_flags['--na_rep'] for j in
+                                         range(lst_number_of_individuals[i])])
                 flag_first_na = True  # Indicate flag: Fill info columns later with other input files
         else:  # If this is not the first file
             if lst_alt_frq_val[i] == dict_flags['--na_rep']:

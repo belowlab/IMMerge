@@ -1,4 +1,4 @@
-Start at (GMT)2021-10-05 15:27:44
+Job starts at (local time) 2022-02-21 18:48:00
 
 Input options used:
 	--input: ['../data_sample/sample_group1.dose.vcf.gz', '../data_sample/sample_group2.dose.vcf.gz', '../data_sample/sample_group3.dose.vcf.gz']
@@ -11,9 +11,9 @@ Input options used:
 	--r2_threshold: 0
 
 Below .info.gz files were used:
-	.info.gz
-	.info.gz
-	.info.gz
+	sample_group1.info.gz
+	sample_group2.info.gz
+	sample_group3.info.gz
 
 Number of variants:
 	Total number of all input files combined: 22

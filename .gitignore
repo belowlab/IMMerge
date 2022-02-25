@@ -1,10 +1,10 @@
 src/.idea/
-src/chr21_test.dose.vcf.gz
 sample_data/
 sample_output/
 demo_make_info.sh
 .DS_Store
 .Rhistory
+src/deprecated/
 
 
 # Byte-compiled / optimized / DLL files

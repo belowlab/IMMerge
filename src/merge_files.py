@@ -2,8 +2,7 @@
 # This code is used to merge imputed files from TopMed based on list of saved variants in prior steps
 # The goal is to combine post-imputation vcf.gz files into one vcf.gz file
 
-import pandas as pd
-import gzip
+from xopen import xopen # Faster than gzip
 import sys
 import process_args
 import get_SNP_list
@@ -258,7 +257,7 @@ def run_merge_files():
     # Store file handles of input files in a list for iteration
     lst_input_fn = dict_flags['--input']
     lst_input_fh = []  # a list to store file handles of input files
-    for fn in lst_input_fn: lst_input_fh.append(gzip.open(fn, 'rt'))
+    for fn in lst_input_fn: lst_input_fh.append(xopen(fn))
     # File handle for output
     # output_fn = dict_flags['--output'] + '.dose.vcf.gz' # Do not always need this dose suffix
     output_fn = dict_flags['--output'] + '.vcf.gz'
@@ -294,6 +293,28 @@ def run_merge_files():
 
 # run_merge_files()
 
+# ----------------- Profile memory usage ---------------------
+'''from memory_profiler import profile
+
+@profile
+def run_merge_script():
+    multiprocessing.set_start_method("fork")  # This is necessary for python 3.8, but won't matter in other versions
+    # Use user defined number of cores to do multi processing, unless not defined
+    if dict_flags['--thread'] == 1:  # no multiprocessing
+        run_merge_files()
+    elif dict_flags['--thread'] <= multiprocessing.cpu_count():
+        number_of_cores_to_use = dict_flags['--thread']
+        with multiprocessing.Pool(number_of_cores_to_use) as p:
+            run_merge_files()
+    else:
+        number_of_cores_to_use = multiprocessing.cpu_count()
+        with multiprocessing.Pool(number_of_cores_to_use) as p:
+            run_merge_files()
+
+if __name__ == '__main__':
+    run_merge_script()'''
+
+
 if __name__ == '__main__':
     multiprocessing.set_start_method("fork")  # This is necessary for python 3.8, but won't matter in other versions
     # Use user defined number of cores to do multi processing, unless not defined
@@ -305,3 +326,4 @@ if __name__ == '__main__':
     else:
         number_of_cores_to_use = multiprocessing.cpu_count()
         with multiprocessing.Pool(number_of_cores_to_use) as p: run_merge_files()
+

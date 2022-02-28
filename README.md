@@ -1,7 +1,7 @@
 # TOPMed_merge
 
 ## Required packages and versions
-1. This project is built with python 3.7.x and below packages
+1. This project is built with python 3.7.x and below packages: (python 3.9 and 3.10 are also verified to work)
 	* pandas 1.3.3
 	* bgzip 0.4.0
 	* xopen 1.4.0

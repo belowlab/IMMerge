@@ -4,6 +4,7 @@
 1. This project is built with python 3.7.x and below packages
 	* pandas 1.3.3
 	* bgzip 0.4.0
+	* xopen 1.4.0
 2. Packages that might need manual installation: pandas, bgzip
 	1. To install missing packages use: ```pip install package_name```
 	2. For example: ```pip install bgzip```

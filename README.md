@@ -10,7 +10,7 @@
 	2. For example: ```pip install bgzip```
 
 ## Arguments
-1. The program is designed to be used in command line with user input flags and values
+1. The program is designed to be used in command line with user input flags and values.
 2. Valid flags are:
 	* --input: (required) files to be merged, multiple files are allowed
 	* --output: (optional, default is "merged") output file name without suffix. Default value is "merged" and saved at working directory (plus appropriate suffix).

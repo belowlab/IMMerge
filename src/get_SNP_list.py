@@ -11,6 +11,7 @@
 
 import pandas as pd
 import gzip
+import numpy as np
 
 # This function returns a list of DataFrames read from .info.gz files
 # Parameter:
@@ -136,7 +137,7 @@ def __calculate_r2_maf_altFrq(df_merged, col_name_r2_combined,
         df_merged[col_name_alt_frq + '_adj'] = df_merged[col_name_alt_frq] * lst_number_of_individuals[i]  # MAF * # individuals
 
         # Weight is number of individuals (but not include missing values)
-        # Code below reflect missing values by * and / the same values (Rsq)
+        # Code below reflects missing values by * and / the same values (Rsq)
         # Missing values are not counted when calculate weighted Rsq, MAF and AF (so use if for all!)
         df_merged[col_name_r2 + '_weight_adj'] = lst_number_of_individuals[i] * df_merged[col_name_r2]/ df_merged[col_name_r2]
         lst_col_names_r2_adj.append(col_name_r2+'_adj')
@@ -148,6 +149,17 @@ def __calculate_r2_maf_altFrq(df_merged, col_name_r2_combined,
     df_merged[col_name_maf_combined] = df_merged[lst_col_names_maf_adj].sum(axis=1) / df_merged[lst_col_names_weight_adj].sum(axis=1)
     if r2_merge_type == 'weighted_average': # ie. dict_flags['--r2_output']=='weighted_average'
         df_merged[col_name_r2_combined] = df_merged[lst_col_names_r2_adj].sum(axis=1) / df_merged[lst_col_names_weight_adj].sum(axis=1)
+    elif r2_merge_type == 'z_transformation': # Fisher's z-transformation
+        # Fisher's z-transformation -> weighted average -> tanh
+        # z transformation: 0.5 * np.log((1 + r2) / (1 - r2))
+        lst_col_names_r2_ztrans_adj = []
+        for i in range(len(lst_input_fn)):
+            col_name_r2 = 'Rsq_group'+str(i+1)
+            lst_col_names_r2_ztrans_adj.append(col_name_r2)
+            df_merged[col_name_r2+'_z_trans'] = df_merged['Rsq_group'+str(i+1)].apply(lambda x: 0.5 * np.log((1 + x) / (1 - x)))
+            df_merged[col_name_r2 + '_z_trans_weight_adj'] = df_merged[col_name_r2+'_z_trans'] * lst_number_of_individuals[i]
+        df_merged['Rsq_ztrans_combined'] = df_merged[lst_col_names_r2_ztrans_adj].sum(axis=1) / df_merged[lst_col_names_weight_adj].sum(axis=1)
+        df_merged[col_name_r2_combined] = np.tanh(df_merged['Rsq_ztrans_combined'])
     elif r2_merge_type == 'first': # ie. dict_flags['--r2_output']=='first'
         df_merged[col_name_r2_combined] = df_merged['Rsq_group1']
     elif r2_merge_type == 'mean':

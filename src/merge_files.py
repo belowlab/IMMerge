@@ -3,7 +3,7 @@
 # The goal is to combine post-imputation vcf.gz files into one vcf.gz file
 
 from xopen import xopen # Faster than gzip
-import sys
+# import sys
 import process_args
 import get_SNP_list
 import check_r2_setting_for_imputation
@@ -16,12 +16,13 @@ start_time = time.time()    # Track execution time
 print('Job starts at (local time) ', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_time)))
 
 # File name can be passed to this code in terminal, or use import this code as in a script (need to modify a little)
-args = sys.argv
+# args = sys.argv
 
 # Process terminal input
 # dict_flags contains values for below flags:
 #   --input, --output, --thread, --missing, --r2_threshold, --r2_output
-dict_flags = process_args.process_args(args) # Process terminal input
+# dict_flags = process_args_ongoing.process_args(args) # Process terminal input
+dict_flags = process_args.process_args() # Process terminal input
 
 # Write some info into a log file
 log_fn = dict_flags['--output'] + '.log' # Save Important processing info into a .log file for user reference
@@ -257,7 +258,7 @@ def run_merge_files():
     # Store file handles of input files in a list for iteration
     lst_input_fn = dict_flags['--input']
     lst_input_fh = []  # a list to store file handles of input files
-    for fn in lst_input_fn: lst_input_fh.append(xopen(fn))
+    for fn in lst_input_fn: lst_input_fh.append(xopen(fn, threads=dict_flags['--thread']-1)) # threads=0 is valid for xopen (ie. no external process is used)
     # File handle for output
     # output_fn = dict_flags['--output'] + '.dose.vcf.gz' # Do not always need this dose suffix
     output_fn = dict_flags['--output'] + '.vcf.gz'

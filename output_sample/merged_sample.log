@@ -1,14 +1,14 @@
-Job starts at (local time) 2022-02-24 17:38:31
+Job starts at (local time) 2022-06-15 05:33:43
 
 Input options used:
 	--input: ['../data_sample/sample_group1.dose.vcf.gz', '../data_sample/sample_group2.dose.vcf.gz', '../data_sample/sample_group3.dose.vcf.gz']
 	--output: ../output_sample/merged_sample
+	--thread: 4
 	--missing: 1
-	--duplicate_id: 5
-	--r2_output: weighted_average
-	--thread: 1
-	--na_rep: .
+	--na_rep: .|.
 	--r2_threshold: 0
+	--r2_output: weighted_average
+	--duplicate_id: 5
 
 Below .info.gz files were used:
 	sample_group1.info.gz
@@ -22,6 +22,6 @@ Number of variants:
 
 Numbers of individuals in each input file: [10, 20, 15]
 
-Duration: 0.00 hours, 0.00 minutes, 0.26 seconds
+Duration: 0.00 hours, 0.00 minutes, 0.28 seconds
 
 End of run

@@ -86,7 +86,7 @@ def process_args():
     # Check --r2_output
     if dict_flags['--r2_output'] not in ['first', 'weighted_average', 'z_transformation', 'mean', 'min', 'max']:
         print('Error: Invalid value of --r2_output:', dict_flags['--r2_output'])
-        print('\t- Value of --r2_output should be: first, weighted_average or mean\nExit')
+        print('\t- Value of --r2_output should be: first, weighted_average, z_transformation, mean, min or max\nExit')
         exit()
 
     # Check --duplicate_id

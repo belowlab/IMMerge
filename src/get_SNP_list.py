@@ -156,7 +156,10 @@ def __calculate_r2_maf_altFrq(df_merged, col_name_r2_combined,
         for i in range(len(lst_input_fn)):
             col_name_r2 = 'Rsq_group'+str(i+1)
             lst_col_names_r2_ztrans_adj.append(col_name_r2)
-            df_merged[col_name_r2+'_z_trans'] = df_merged['Rsq_group'+str(i+1)].apply(lambda x: 0.5 * np.log((1 + x) / (1 - x)))
+            # Cannot use apply(), it will raise 'division by zero error' when Rsq=1
+            # df_merged[col_name_r2+'_z_trans'] = df_merged['Rsq_group'+str(i+1)].apply(lambda x: 0.5 * np.log((1 + x) / (1 - x)))
+            # The code below will return np.inf when Rsq=1. Then np.tanh(np.inf)=1
+            df_merged[col_name_r2 + '_z_trans'] = 0.5 * np.log((1 + df_merged['Rsq_group' + str(i + 1)]) / (1 - df_merged['Rsq_group' + str(i + 1)]))
             df_merged[col_name_r2 + '_z_trans_weight_adj'] = df_merged[col_name_r2+'_z_trans'] * lst_number_of_individuals[i]
         df_merged['Rsq_ztrans_combined'] = df_merged[lst_col_names_r2_ztrans_adj].sum(axis=1) / df_merged[lst_col_names_weight_adj].sum(axis=1)
         df_merged[col_name_r2_combined] = np.tanh(df_merged['Rsq_ztrans_combined'])

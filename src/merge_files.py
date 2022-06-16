@@ -283,17 +283,6 @@ def run_merge_files():
     # Print out execution time
     print_execution_time(start_time)
 
-    # multiprocessing.set_start_method("fork")  # This is necessary for python 3.8, but won't matter in other versions
-    # # To be safe, use the max number of cores to do multi processing, unless only one core available
-    # if multiprocessing.cpu_count() == 1:
-    #     number_of_cores_to_use = 1
-    # else:
-    #     number_of_cores_to_use = multiprocessing.cpu_count() - 1
-    # with multiprocessing.Pool(number_of_cores_to_use) as p:
-    #     run_merge_files()
-
-# run_merge_files()
-
 # ----------------- Profile memory usage ---------------------
 '''from memory_profiler import profile
 
@@ -315,16 +304,5 @@ def run_merge_script():
 if __name__ == '__main__':
     run_merge_script()'''
 
-
 if __name__ == '__main__':
-    multiprocessing.set_start_method("fork")  # This is necessary for python 3.8, but won't matter in other versions
-    # Use user defined number of cores to do multi processing, unless not defined
-    if dict_flags['--thread'] == 1: # no multiprocessing
-        run_merge_files()
-    elif dict_flags['--thread'] <= multiprocessing.cpu_count():
-        number_of_cores_to_use = dict_flags['--thread']
-        with multiprocessing.Pool(number_of_cores_to_use) as p: run_merge_files()
-    else:
-        number_of_cores_to_use = multiprocessing.cpu_count()
-        with multiprocessing.Pool(number_of_cores_to_use) as p: run_merge_files()
-
+    run_merge_files()

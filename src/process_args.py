@@ -30,7 +30,7 @@ import argparse
 def process_args():
     parser = argparse.ArgumentParser()
     lst_args = ['--input', '--output', '--thread', '--missing', '--na_rep',
-                '--r2_threshold', '--r2_output', '--duplicate_id']
+                '--r2_threshold', '--r2_output', '--r2_cap', '--duplicate_id']
     # Help messages of each option
     dict_help = {
         '--input': '(Required) Files to be merged, multiple files are allowed. Must in gzipped or bgziped VCF format',
@@ -40,15 +40,17 @@ def process_args():
         '--na_rep': '(Optional) Default is ".|.". Defines what symbol to use for missing values. This flag is ignored if --missing is 0',
         '--r2_threshold': '(Optional) Default is 0, ie. no filtering. Only variants with combined imputation quality r2≥r2_threshold will be saved in the merged file',
         '--r2_output': '(Optional) Default is "first". Defines how r2 is calculated in the output file. Valid values are: first, mean, weighted_average, z_transformation, min, max',
+        '--r2_cap': '(Optional) Adjust R squared by --r2_cap if Rsq=1. Only valid for z transformation to avoid infinity',
         '--duplicate_id': '(Optional) Default is 0. Defines number of duplicated individuals in each input file. Duplicated IDs should be the first N columns in each file'}
 
     # Default values and data types of optional flags
     dict_default = {'--output': ['merged', str],
                     '--thread': [1, int],
                     '--missing': [0, int],
-                    '--na_rep': ['.|.', str],
+                    '--na_rep': ['.', str],
                     '--r2_threshold': [0, int],
                     '--r2_output': ['first', str],
+                    '--r2_cap': [10e-4, float],
                     '--duplicate_id': [0, int]}
     # Add arguments
     for arg in lst_args:  # If user provide arguments not in the list, they will not be used (and no error message)
@@ -89,6 +91,12 @@ def process_args():
         print('\t- Value of --r2_output should be: first, weighted_average, z_transformation, mean, min or max\nExit')
         exit()
 
+    # Check --r2_cap
+    if dict_flags['--r2_cap'] <0 or dict_flags['--r2_cap']>=1:
+        print('Error: Invalid value of --r2_cap:', dict_flags['--r2_cap'])
+        print('\t- Value of --r2_cap should be numeric between 0 and 1\nExit')
+        exit()
+
     # Check --duplicate_id
     if dict_flags['--duplicate_id'] < 0:
         print('Error: Invalid value of --duplicate_id:', dict_flags['--duplicate_id'])
@@ -99,6 +107,8 @@ def process_args():
     for k, v in dict_flags.items():
         if k == '--na_rep' and dict_flags['--missing'] == 0:
             print('\t' + k, v, '(ignored since --missing is 0)')
+        if k == '--r2_cap' and dict_flags['--r2_output'] != 'z_transformation':
+            print('\t' + k, v, '(ignored since --r2_output is not z_transformation)')
         else:
             print('\t' + k, v)
 

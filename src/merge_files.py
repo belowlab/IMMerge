@@ -145,7 +145,7 @@ def search_SNP_and_read_lines(snp, fh):
 # This function takes in a variant ID,
 # checks every input file to find corresponding line and returns a merged line.
 # If a snp is not found in certain input file, fill with symbol of missing values for that file
-# Missing values symbol can be any user supplied string, default is 'NA'
+# Missing values symbol can be any user supplied string, default is '.'
 # Value of INFO field is replace with new values calculated from all input files
 # Parameters:
 # - snp:
@@ -166,6 +166,7 @@ def merge_individual_variant(snp, number_of_dup_id, inx_info_column, new_info_va
                 # If this is the first input file and variant is not missing,
                 # then keep all columns including info columns
                 lst_tmp = search_SNP_and_read_lines(snp, lst_input_fh[i]).split(maxsplit=inx_info_column+1)
+
                 lst_tmp[inx_info_column] = new_info_val
                 merged_line = '\t'.join(lst_tmp)
             else:
@@ -182,7 +183,6 @@ def merge_individual_variant(snp, number_of_dup_id, inx_info_column, new_info_va
                     [dict_flags['--na_rep']+'|'+dict_flags['--na_rep'] for j in range(lst_number_of_individuals[i]-number_of_dup_id)])
             else:  # If not missing, split and remove info columns
                 line = search_SNP_and_read_lines(snp, lst_input_fh[i])
-
                 # Skip number_of_dup_id samples when merging
                 merged_line = merged_line + '\t' + line.split(maxsplit=number_of_dup_id+inx_indiv_id_starts)[-1]
                 if flag_first_na:  # If info columns is still missing, add these columns back
@@ -204,7 +204,12 @@ def merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, 
     count = 0  # For console output
     fh_snp_kept = open(dict_flags['--output']+'_variants_kept.txt')
     print('\t'+dict_flags['--output']+'_variants_kept.txt file loaded')
-    fh_snp_kept.readline()  # Skip the first line (header)
+
+    # Read the first line (header), find index of combined ALT_freq, MAF, Rsq
+    line = fh_snp_kept.readline().strip().split()
+    indx_ALT_Frq_combined = line.index('ALT_Frq_combined')
+    indx_MAF_combined = line.index('MAF_combined')
+    indx_Rsq_combined = line.index('Rsq_combined')
 
     while True:
         line_snp_kept = fh_snp_kept.readline().strip()
@@ -215,10 +220,10 @@ def merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, 
             # Get ALT_frq, MAF and r2 values
             # Use ALT_frq_groupX values to decide whether SNP is missing in the Xth file
             lst_alt_frq_val = []
-            ALT_Frq_combined = lst_snp_kept[-3]
-            MAF_combined = lst_snp_kept[-2]
-            Rsq_combined = lst_snp_kept[-1]
-            genotyped = lst_snp_kept[3]
+            ALT_Frq_combined = lst_snp_kept[indx_ALT_Frq_combined]
+            MAF_combined = lst_snp_kept[indx_MAF_combined]
+            Rsq_combined = lst_snp_kept[indx_Rsq_combined]
+            genotyped = lst_snp_kept[3] # "Genotyped" is always the 4th column, so can be hard coded
             # Create new INFO value to replace INFO column in merged line
             new_info_val = 'AF='+ALT_Frq_combined+';MAF='+MAF_combined+';R2='+Rsq_combined+';'+genotyped
 

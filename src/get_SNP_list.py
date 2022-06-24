@@ -96,15 +96,15 @@ def __merge_snps(lst_info_df, cols_to_keep=['SNP', 'REF(0)', 'ALT(1)', 'Genotype
 # - col_name_r2_combined: column name of combined r2
 # - col_name_maf_combined: column name of combined minor allele frequency
 # - col_name_alt_frq: column name of combined alternative allele frequency (ALT_Frq)
-# - lst_input_fn: a list of names of input files
-# - r2_merge_type: use value of dict_flags['--r2_output'], can be 'weighted_average', 'first', 'mean', 'min' and 'max'
+# - dict_flags: argument dictionary of all flags
+# (Deprecated) - lst_input_fn: a list of names of input files
+# (Deprecated) - r2_merge_type: use value of dict_flags['--r2_output'], can be 'weighted_average', 'first', 'mean', 'min' and 'max'
 #                  Defines how Rsq is calculated
 def __calculate_r2_maf_altFrq(df_merged, col_name_r2_combined,
-                              col_name_maf_combined, col_name_alt_frq_combined,
-                              lst_input_fn, r2_merge_type):
+                              col_name_maf_combined, col_name_alt_frq_combined, dict_flags):
     lst_number_of_individuals = []  # A list to store number of individuals of each input file
     # Count number of individuals in each input file
-    for fn in lst_input_fn:
+    for fn in dict_flags['--input']:
         with gzip.open(fn, 'rt') as fh:
             line = fh.readline().strip()
             while line[0:2]=='##':
@@ -124,7 +124,7 @@ def __calculate_r2_maf_altFrq(df_merged, col_name_r2_combined,
     # In this way weight can be adjusted to reflect missing values in r2
     lst_col_names_weight_adj = []
     lst_col_r2_names=[] # Store column names of r2 from each file, such as Rsq_group1, Rsq_group2 ...
-    for i in range(len(lst_input_fn)):
+    for i in range(len(dict_flags['--input'])):
         col_name_r2 = 'Rsq_group'+str(i+1)
         col_name_maf = 'MAF_group' + str(i+1)
         col_name_alt_frq = 'ALT_Frq_group'+str(i+1)
@@ -147,27 +147,36 @@ def __calculate_r2_maf_altFrq(df_merged, col_name_r2_combined,
 
     df_merged[col_name_alt_frq_combined] = df_merged[lst_col_names_alt_frq_adj].sum(axis=1) / df_merged[lst_col_names_weight_adj].sum(axis=1)
     df_merged[col_name_maf_combined] = df_merged[lst_col_names_maf_adj].sum(axis=1) / df_merged[lst_col_names_weight_adj].sum(axis=1)
-    if r2_merge_type == 'weighted_average': # ie. dict_flags['--r2_output']=='weighted_average'
+    if dict_flags['--r2_output'] == 'weighted_average': # ie. dict_flags['--r2_output']=='weighted_average'
         df_merged[col_name_r2_combined] = df_merged[lst_col_names_r2_adj].sum(axis=1) / df_merged[lst_col_names_weight_adj].sum(axis=1)
-    elif r2_merge_type == 'z_transformation': # Fisher's z-transformation
+    elif dict_flags['--r2_output'] == 'z_transformation': # Fisher's z-transformation
         # Fisher's z-transformation -> weighted average -> tanh
         # z transformation: 0.5 * np.log((1 + r2) / (1 - r2))
-        lst_col_names_r2_ztrans_adj = []
-        for i in range(len(lst_input_fn)):
+        lst_col_names_r2_z_trans = []
+        lst_col_names_r2_z_trans_weight_adj = []
+        for i in range(len(dict_flags['--input'])):
             col_name_r2 = 'Rsq_group'+str(i+1)
-            lst_col_names_r2_ztrans_adj.append(col_name_r2)
+            # adjust with --r2_cap when Rsq=1 (Rsq-1). This column will be saved in output
+            df_merged['Rsq_group'+str(i+1)+'_cap_adj']=df_merged['Rsq_group'+str(i+1)]
+            mask_rsq = (df_merged['Rsq_group'+str(i+1)+'_cap_adj']==1)
+            # Substract --r2_cap when R2=1
+            df_merged.loc[mask_rsq, 'Rsq_group' + str(i + 1) + '_cap_adj'] -= dict_flags['--r2_cap']
+
             # Cannot use apply(), it will raise 'division by zero error' when Rsq=1
             # df_merged[col_name_r2+'_z_trans'] = df_merged['Rsq_group'+str(i+1)].apply(lambda x: 0.5 * np.log((1 + x) / (1 - x)))
             # The code below will return np.inf when Rsq=1. Then np.tanh(np.inf)=1
-            df_merged[col_name_r2 + '_z_trans'] = 0.5 * np.log((1 + df_merged['Rsq_group' + str(i + 1)]) / (1 - df_merged['Rsq_group' + str(i + 1)]))
-            df_merged[col_name_r2 + '_z_trans_weight_adj'] = df_merged[col_name_r2+'_z_trans'] * lst_number_of_individuals[i]
-        df_merged['Rsq_ztrans_combined'] = df_merged[lst_col_names_r2_ztrans_adj].sum(axis=1) / df_merged[lst_col_names_weight_adj].sum(axis=1)
-        df_merged[col_name_r2_combined] = np.tanh(df_merged['Rsq_ztrans_combined'])
-    elif r2_merge_type == 'first': # ie. dict_flags['--r2_output']=='first'
+            df_merged[col_name_r2 + '_z_trans'] = 0.5 * np.log((1 + np.sqrt(df_merged['Rsq_group'+str(i + 1)+'_cap_adj']) ) / (1 - np.sqrt(df_merged['Rsq_group'+str(i + 1)+'_cap_adj']) ))
+            df_merged[col_name_r2 + '_z_trans_weight_adj'] = df_merged[col_name_r2+'_z_trans'] * lst_number_of_individuals[i] # Z_transed_r * weight
+            lst_col_names_r2_z_trans.append(col_name_r2 + '_z_trans')
+            lst_col_names_r2_z_trans_weight_adj.append(col_name_r2 + '_z_trans_weight_adj')
+        df_merged['R_z_trans_combined'] = df_merged[lst_col_names_r2_z_trans_weight_adj].sum(axis=1) / df_merged[lst_col_names_weight_adj].sum(axis=1)
+        df_merged[col_name_r2_combined] = (np.tanh(df_merged['R_z_trans_combined']))**2
+        df_merged['var_of_z_trans_r'] = df_merged[lst_col_names_r2_z_trans].var(axis=1) # variance of z transformed R
+    elif dict_flags['--r2_output'] == 'first': # ie. dict_flags['--r2_output']=='first'
         df_merged[col_name_r2_combined] = df_merged['Rsq_group1']
-    elif r2_merge_type == 'mean':
+    elif dict_flags['--r2_output'] == 'mean':
         df_merged[col_name_r2_combined] = df_merged[lst_col_r2_names].mean(axis=1)
-    elif r2_merge_type == 'min':  # ie. dict_flags['--r2_output']=='min'
+    elif dict_flags['--r2_output'] == 'min':  # ie. dict_flags['--r2_output']=='min'
         df_merged[col_name_r2_combined] = df_merged[lst_col_r2_names].min(axis=1)
     else:  # ie. dict_flags['--r2_output']=='max'
         df_merged[col_name_r2_combined] = df_merged[lst_col_r2_names].max(axis=1)
@@ -231,8 +240,7 @@ def __process_output(df_merged, dict_flags, lst_index_col_names):
     col_name_alt_frq_combined = 'ALT_Frq_combined'
 
     lst_number_of_individuals = __calculate_r2_maf_altFrq(df_merged, col_name_r2_combined,
-                                                          col_name_maf_combined, col_name_alt_frq_combined,
-                                                          dict_flags['--input'], dict_flags['--r2_output'])
+                                                          col_name_maf_combined, col_name_alt_frq_combined, dict_flags)
     # Save result to output files
     float_format = '%.6f'
     if missing == 0:
@@ -241,9 +249,9 @@ def __process_output(df_merged, dict_flags, lst_index_col_names):
         # Save variant_kept sorted by position and index in each input file, since there could be multiple variants at the same position
         df_merged[mask_to_keep].sort_values(by=['pos', 'SNP']+lst_index_col_names)\
             .drop(columns=lst_index_col_names+['pos'])\
-            .to_csv(to_keep_fn, index=False, sep='\t', na_rep=dict_flags['--na_rep'], float_format=float_format)
+            .to_csv(to_keep_fn, index=False, sep='\t', na_rep='.', float_format=float_format)
         df_merged[mask_to_exclude].drop(columns=lst_index_col_names+['pos']).to_csv(to_exclude_fn, index=False,
-                                                                                           sep='\t', na_rep=dict_flags['--na_rep'],
+                                                                                           sep='\t', na_rep='.',
                                                                                            float_format=float_format)
         print('\tNumber of saved variants:', df_merged[mask_to_keep].shape[0])
         print('\tNumber of excluded variants:', df_merged[mask_to_exclude].shape[0])
@@ -268,9 +276,9 @@ def __process_output(df_merged, dict_flags, lst_index_col_names):
 
         df_merged.loc[mask_to_keep].sort_values(by=['pos', 'SNP'])\
                 .drop(columns=lst_index_col_names+['pos', 'missing'])\
-                .to_csv(to_keep_fn, index=False, sep='\t', na_rep=dict_flags['--na_rep'], float_format=float_format)
+                .to_csv(to_keep_fn, index=False, sep='\t', na_rep='.', float_format=float_format)
         df_merged.loc[mask_to_exclude].drop(columns=lst_index_col_names+['pos', 'missing'])\
-            .to_csv(to_exclude_fn, index=False, sep='\t', na_rep=dict_flags['--na_rep'], float_format=float_format)
+            .to_csv(to_exclude_fn, index=False, sep='\t', na_rep='.', float_format=float_format)
 
         print('\tNumber of saved variants:', df_merged.loc[mask_to_keep].shape[0])
         print('\tNumber of excluded variants:', df_merged.loc[mask_to_exclude].shape[0])

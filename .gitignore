@@ -1,3 +1,6 @@
+tmp_out/
+data_sample/
+output_sample/
 src/.idea/
 sample_data/
 sample_output/

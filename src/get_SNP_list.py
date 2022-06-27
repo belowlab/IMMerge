@@ -22,7 +22,7 @@ def __get_lst_info_df(dict_flags):
     print('\nBelow .info.gz files will be used:')
     lst_info_fn = []
     for fn in dict_flags['--input']:
-        info_fn = fn.split('.dose')[0] + '.info.gz'
+        info_fn = fn.split('.')[0] + '.info.gz'
         lst_info_fn.append(info_fn)
         print('\t' + info_fn)
 

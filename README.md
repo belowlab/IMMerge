@@ -62,9 +62,6 @@
 ## Example code
 Here is an example using sample data in ```./data_sample/```, output files are saved in ```./output_sample/```.
 ```bash
-python merge_files.py --input ../data_sample/sample_group1.dose.vcf.gz ../data_sample/sample_group2.dose.vcf.gz ../data_sample/sample_group3.dose.vcf.gz \
-		      --output ../output_sample/merged_sample \
-		      --missing 1 \
-		      --duplicate_id 5 \
-		      --r2_output weighted_average
+cd TOPMed_merge
+python src/merge_files.py --input data_sample/sample_group1.dose.vcf.gz data_sample/sample_group2.dose.vcf.gz data_sample/sample_group3.dose.vcf.gz --output output_sample/merged_sample --missing 1 --duplicate_id 5 --r2_output z_transformation
 ```

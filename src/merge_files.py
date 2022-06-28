@@ -3,7 +3,6 @@
 # The goal is to combine post-imputation vcf.gz files into one vcf.gz file
 
 from xopen import xopen # Faster than gzip
-# import sys
 import process_args
 import get_SNP_list
 import check_r2_setting_for_imputation
@@ -115,6 +114,7 @@ def merge_header_lines(lst_input_fh, fh_output, number_of_dup_id=dict_flags['--d
             inx_info_column = line.split().index('INFO')
             # inx_snp_id_column = line.split().index('ID')
             print('\tIndividual genotype data starts from column #:', inx_indiv_id_starts + 1)
+            print('\tINFO column at column #:', inx_info_column + 1)
             # Create merged header line, initialize with header from the first file
             line_to_write = line
             for fh in lst_input_fh[1:]: # Read header line from rest file handles
@@ -166,7 +166,6 @@ def merge_individual_variant(snp, number_of_dup_id, inx_info_column, new_info_va
                 # If this is the first input file and variant is not missing,
                 # then keep all columns including info columns
                 lst_tmp = search_SNP_and_read_lines(snp, lst_input_fh[i]).split(maxsplit=inx_info_column+1)
-
                 lst_tmp[inx_info_column] = new_info_val
                 merged_line = '\t'.join(lst_tmp)
             else:

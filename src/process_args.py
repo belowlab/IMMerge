@@ -26,6 +26,7 @@
 #   Duplicated IDs should be the first N columns in each file and not mixed with unique IDs.
 #   Starting from the second input file, data of the first N individuals will be skipped in the merged output
 import argparse
+import os.path
 
 def process_args():
     parser = argparse.ArgumentParser()
@@ -69,6 +70,10 @@ def process_args():
         print('Error: Invalid value of --input:', dict_flags['--input'])
         print('\t- At least two files are needed to merge\nExit')
         exit()
+    for fn in dict_flags['--input']:
+        if not os.path.exists(fn): # Check if input files exist
+            print('Error:', fn, 'does not exist\nExit')
+            exit()
 
     # Check --thread
     if dict_flags['--thread'] <= 0: dict_flags['--thread'] = 1  # Assign 1 to --thread if user supplied a value<=0

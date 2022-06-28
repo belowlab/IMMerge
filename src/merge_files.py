@@ -2,7 +2,7 @@
 # This code is used to merge imputed files from TopMed based on list of saved variants in prior steps
 # The goal is to combine post-imputation vcf.gz files into one vcf.gz file
 
-from xopen import xopen # Faster than gzip
+from xopen import PipedCompressionWriter, xopen # Faster than gzip
 # import sys
 import process_args
 import get_SNP_list
@@ -268,6 +268,7 @@ def run_merge_files():
     # output_fn = dict_flags['--output'] + '.dose.vcf.gz' # Do not always need this dose suffix
     output_fn = dict_flags['--output'] + '.vcf.gz'
     fh_output_raw = open(output_fn, 'wb')  # Open for writing (appending), use bgzip module later to write
+    PipedCompressionWriter(output_fn, threads_flag="--threads", program_args=["bgzip", "-i"])
     fh_output = bgzip.BGZipWriter(fh_output_raw)
 
     # 2. Merge header lines and write to output file (row 0-18 in this version (2021/07,v1))

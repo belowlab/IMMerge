@@ -267,7 +267,7 @@ def run_merge_files():
     # File handle for output
     # output_fn = dict_flags['--output'] + '.dose.vcf.gz' # Do not always need this dose suffix
     output_fn = dict_flags['--output'] + '.vcf.gz'
-    fh_output = PipedCompressionWriter(path=output_fn, threads_flag="-@", program_args=["bgzip", f"-I {output_fn}i"], threads=dict_flags['--thread'])
+    fh_output = PipedCompressionWriter(path=output_fn, threads_flag="-@", program_args=["bgzip", f"-I {output_fn}.gzi"], threads=dict_flags['--thread'])
 
     # 2. Merge header lines and write to output file (row 0-18 in this version (2021/07,v1))
     # Also Get index number of some columns:

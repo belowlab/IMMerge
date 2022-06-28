@@ -83,14 +83,14 @@ def merge_header_lines(lst_input_fh, fh_output, number_of_dup_id=dict_flags['--d
 
     # Use encode() to convert string to byte
     # This is to make sure bgzip module works, since it uses bytearray to write
-    fh_output.write(line.encode())
+    fh_output.write(line)
     line = lst_input_fh[0].readline().strip()  # Read the 2nd line of the first input files
 
     inx_indiv_id_starts = 0  # From which column genotype data starts
     inx_info_column = 0 # Find index of column "INFO", in order to replace values later
     while line[0] == '#': # Info and header lines all start with "#"
         if line[0:2] == '##':  # If Info lines, write everything directly
-            fh_output.write(('\n' + line).encode())
+            fh_output.write(('\n' + line))
             for fh in lst_input_fh[1:]:  # Read the rest file handles, but do not need to write them
                 line = fh.readline().strip()
         else:  # If column header line, then merge and write (line starts with single #)
@@ -101,13 +101,13 @@ def merge_header_lines(lst_input_fh, fh_output, number_of_dup_id=dict_flags['--d
                     i = i.split('/')[-1]
                 extra_info_line = extra_info_line + i + ', '
             extra_info_line = extra_info_line[:-2]+'>' # Remove the last ', '
-            fh_output.write((extra_info_line + '\n').encode())
-            fh_output.write(('##VCFmerge=<Date=' + time.strftime('%a, %d %b %Y %H:%M:%S', time.localtime()) + '>\n').encode())
-            fh_output.write(('##VCFmerge=<Missing=' + str(dict_flags['--missing']) + ', duplicate_id='+str(dict_flags['--duplicate_id'])+', na_rep='+dict_flags['--na_rep']+'>\n').encode())
-            # fh_output.write(('##VCFmerge=<Rsq filter=' + str(dict_flags['--r2_threshold']) + '>\n').encode())
-            fh_output.write(('##VCFmerge=<Merged MAF=weighted average, Merged AF=weighted average>\n').encode())
+            fh_output.write((extra_info_line + '\n'))
+            fh_output.write(('##VCFmerge=<Date=' + time.strftime('%a, %d %b %Y %H:%M:%S', time.localtime()) + '>\n'))
+            fh_output.write(('##VCFmerge=<Missing=' + str(dict_flags['--missing']) + ', duplicate_id='+str(dict_flags['--duplicate_id'])+', na_rep='+dict_flags['--na_rep']+'>\n'))
+            # fh_output.write(('##VCFmerge=<Rsq filter=' + str(dict_flags['--r2_threshold']) + '>\n'))
+            fh_output.write(('##VCFmerge=<Merged MAF=weighted average, Merged AF=weighted average>\n'))
             fh_output.write(('##VCFmerge=<Merged Rsq=' + dict_flags['--r2_output'] + ', Rsq filter=' + str(
-                dict_flags['--r2_threshold']) + '>\n+').encode())
+                dict_flags['--r2_threshold']) + '>\n+'))
 
             # In current TOPMed version these are columns of shared information, then followed by individual IDs:
             #   - CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT
@@ -121,7 +121,7 @@ def merge_header_lines(lst_input_fh, fh_output, number_of_dup_id=dict_flags['--d
                 line = fh.readline().strip()
                 # Set maxsplit in slit() function to remove duplicated IDs
                 line_to_write = line_to_write + '\t' + line.split(maxsplit=number_of_dup_id + inx_indiv_id_starts)[-1]
-            fh_output.write((line_to_write + '\n').encode())
+            fh_output.write((line_to_write + '\n'))
             break
 
         line = lst_input_fh[0].readline().strip()  # Read line of the first file to decide what to do
@@ -240,8 +240,8 @@ def merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, 
             merged_line = merge_individual_variant(snp, dict_flags['--duplicate_id'], inx_info_column, new_info_val,
                                                    inx_indiv_id_starts, lst_alt_frq_val, lst_input_fh)
             # Write merged line to output file
-            fh_output.write(merged_line.encode())
-            fh_output.write('\n'.encode())
+            fh_output.write(merged_line)
+            fh_output.write('\n')
 
             # Keep console busy
             count += 1
@@ -267,9 +267,7 @@ def run_merge_files():
     # File handle for output
     # output_fn = dict_flags['--output'] + '.dose.vcf.gz' # Do not always need this dose suffix
     output_fn = dict_flags['--output'] + '.vcf.gz'
-    fh_output_raw = open(output_fn, 'wb')  # Open for writing (appending), use bgzip module later to write
-    PipedCompressionWriter(output_fn, threads_flag="--threads", program_args=["bgzip", "-i"])
-    fh_output = bgzip.BGZipWriter(fh_output_raw)
+    fh_output = PipedCompressionWriter(path=output_fn, threads_flag="-@", program_args=["bgzip", f"-I {output_fn}i"], threads=dict_flags['--thread'])
 
     # 2. Merge header lines and write to output file (row 0-18 in this version (2021/07,v1))
     # Also Get index number of some columns:
@@ -284,7 +282,6 @@ def run_merge_files():
     merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, fh_output)
     for fh in lst_input_fh: fh.close()
     fh_output.close()
-    fh_output_raw.close()
 
     # Print out execution time
     print_execution_time(start_time)

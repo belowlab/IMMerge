@@ -12,7 +12,6 @@
 import pandas as pd
 import gzip
 import numpy as np
-import os.path
 
 # This function returns a list of DataFrames read from .info.gz files
 # Parameter:
@@ -23,17 +22,12 @@ def __get_lst_info_df(dict_flags):
     print('\nBelow .info.gz files will be used:')
     lst_info_fn = []
     for fn in dict_flags['--input']:
-        # info_fn = fn.split('.dose')[0] + '.info.gz'
         info_fn = fn.split('.')[0] + '.info.gz'
         lst_info_fn.append(info_fn)
         print('\t' + info_fn)
 
     lst_info_df = []  # A list to store .info.gz DataFrames
     for info_fn in lst_info_fn:
-        if not os.path.exists(info_fn): # Check if info file exists
-            print('Error: info file', info_fn, 'does not exist\nExit')
-            exit()
-
         try:
             df = pd.read_csv(info_fn, sep='\t', compression='gzip', dtype='str')
             lst_info_df.append(df)
@@ -304,7 +298,7 @@ def __process_output(df_merged, dict_flags, lst_index_col_names):
     with open(log_fn, 'a') as log_fh:
         log_fh.write('\nNumbers of individuals in each input file: '+str(lst_number_of_individuals))
 
-    return lst_number_of_individuals
+    return lst_number_of_individuals, str(df_merged[mask_to_keep].shape[0]) # Return list of number of individuals and number of SNPs kept
 # ---------------- End opf helper functions -----------------
 
 # A wrapper function to run this script
@@ -314,6 +308,6 @@ def get_snp_list(dict_flags):
     df_merged, lst_index_col_names = __merge_snps(lst_info_df)
     print('\nNumber of variants:')
     print('\tTotal number from all input files:', df_merged.shape[0])
-    lst_number_of_individuals = __process_output(df_merged, dict_flags, lst_index_col_names)
-    return lst_number_of_individuals # This return value is used in the final merging step
+    lst_number_of_individuals, number_snps_kept = __process_output(df_merged, dict_flags, lst_index_col_names)
+    return lst_number_of_individuals, number_snps_kept # These return values are used in the final merging step
 

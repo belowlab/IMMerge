@@ -2,13 +2,14 @@
 # This code is used to merge imputed files from TopMed based on list of saved variants in prior steps
 # The goal is to combine post-imputation vcf.gz files into one vcf.gz file
 
-from xopen import xopen # Faster than gzip
+from xopen import PipedCompressionWriter, xopen # Faster than gzip
+# import sys
 import process_args
 import get_SNP_list
 import check_r2_setting_for_imputation
 import time
-import multiprocessing
-import bgzip # vcf.gz file is actually bgzip file not gzip file, but can be opened with gzip
+# import multiprocessing
+# import bgzip # vcf.gz file is actually bgzip file not gzip file, but can be opened with gzip
 
 print('\nVersion 1.0')
 start_time = time.time()    # Track execution time
@@ -45,9 +46,18 @@ with open(log_fn, 'w') as log_fh:
     # log_fh.write('\tNumber of excluded variants:')
 
 check_r2_setting_for_imputation.check_imputatilson_parameters(lst_fn=dict_flags['--input'])
-lst_number_of_individuals = get_SNP_list.get_snp_list(dict_flags)
+lst_number_of_individuals, number_snps_kept = get_SNP_list.get_snp_list(dict_flags)
 
 # ----------------------- Helper functions -----------------------
+# Print progress par in console
+# - progress: current progress (number of SNPs processed)
+# - total: total number of SNPs need to be precessed
+def progress_bar(progres, total=number_snps_kept):
+    percent = 100 * (progres/total)
+    bar = '=' * int(percent) + ' ' * int(100 - percent)
+    print(f'|{bar}| {percent:.2f}%', end='\r')
+
+
 # This function prints execution time at the end of run
 def print_execution_time(satrt_time):
     # merge_files()
@@ -82,14 +92,14 @@ def merge_header_lines(lst_input_fh, fh_output, number_of_dup_id=dict_flags['--d
 
     # Use encode() to convert string to byte
     # This is to make sure bgzip module works, since it uses bytearray to write
-    fh_output.write(line.encode())
+    fh_output.write(line)
     line = lst_input_fh[0].readline().strip()  # Read the 2nd line of the first input files
 
     inx_indiv_id_starts = 0  # From which column genotype data starts
     inx_info_column = 0 # Find index of column "INFO", in order to replace values later
     while line[0] == '#': # Info and header lines all start with "#"
         if line[0:2] == '##':  # If Info lines, write everything directly
-            fh_output.write(('\n' + line).encode())
+            fh_output.write(('\n' + line))
             for fh in lst_input_fh[1:]:  # Read the rest file handles, but do not need to write them
                 line = fh.readline().strip()
         else:  # If column header line, then merge and write (line starts with single #)
@@ -100,13 +110,13 @@ def merge_header_lines(lst_input_fh, fh_output, number_of_dup_id=dict_flags['--d
                     i = i.split('/')[-1]
                 extra_info_line = extra_info_line + i + ', '
             extra_info_line = extra_info_line[:-2]+'>' # Remove the last ', '
-            fh_output.write((extra_info_line + '\n').encode())
-            fh_output.write(('##VCFmerge=<Date=' + time.strftime('%a, %d %b %Y %H:%M:%S', time.localtime()) + '>\n').encode())
-            fh_output.write(('##VCFmerge=<Missing=' + str(dict_flags['--missing']) + ', duplicate_id='+str(dict_flags['--duplicate_id'])+', na_rep='+dict_flags['--na_rep']+'>\n').encode())
-            # fh_output.write(('##VCFmerge=<Rsq filter=' + str(dict_flags['--r2_threshold']) + '>\n').encode())
-            fh_output.write(('##VCFmerge=<Merged MAF=weighted average, Merged AF=weighted average>\n').encode())
+            fh_output.write((extra_info_line + '\n'))
+            fh_output.write(('##VCFmerge=<Date=' + time.strftime('%a, %d %b %Y %H:%M:%S', time.localtime()) + '>\n'))
+            fh_output.write(('##VCFmerge=<Missing=' + str(dict_flags['--missing']) + ', duplicate_id='+str(dict_flags['--duplicate_id'])+', na_rep='+dict_flags['--na_rep']+'>\n'))
+            # fh_output.write(('##VCFmerge=<Rsq filter=' + str(dict_flags['--r2_threshold']) + '>\n'))
+            fh_output.write(('##VCFmerge=<Merged MAF=weighted average, Merged AF=weighted average>\n'))
             fh_output.write(('##VCFmerge=<Merged Rsq=' + dict_flags['--r2_output'] + ', Rsq filter=' + str(
-                dict_flags['--r2_threshold']) + '>\n+').encode())
+                dict_flags['--r2_threshold']) + '>\n+'))
 
             # In current TOPMed version these are columns of shared information, then followed by individual IDs:
             #   - CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT
@@ -114,14 +124,13 @@ def merge_header_lines(lst_input_fh, fh_output, number_of_dup_id=dict_flags['--d
             inx_info_column = line.split().index('INFO')
             # inx_snp_id_column = line.split().index('ID')
             print('\tIndividual genotype data starts from column #:', inx_indiv_id_starts + 1)
-            print('\tINFO column at column #:', inx_info_column + 1)
             # Create merged header line, initialize with header from the first file
             line_to_write = line
             for fh in lst_input_fh[1:]: # Read header line from rest file handles
                 line = fh.readline().strip()
                 # Set maxsplit in slit() function to remove duplicated IDs
                 line_to_write = line_to_write + '\t' + line.split(maxsplit=number_of_dup_id + inx_indiv_id_starts)[-1]
-            fh_output.write((line_to_write + '\n').encode())
+            fh_output.write((line_to_write + '\n'))
             break
 
         line = lst_input_fh[0].readline().strip()  # Read line of the first file to decide what to do
@@ -166,6 +175,7 @@ def merge_individual_variant(snp, number_of_dup_id, inx_info_column, new_info_va
                 # If this is the first input file and variant is not missing,
                 # then keep all columns including info columns
                 lst_tmp = search_SNP_and_read_lines(snp, lst_input_fh[i]).split(maxsplit=inx_info_column+1)
+
                 lst_tmp[inx_info_column] = new_info_val
                 merged_line = '\t'.join(lst_tmp)
             else:
@@ -239,19 +249,22 @@ def merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, 
             merged_line = merge_individual_variant(snp, dict_flags['--duplicate_id'], inx_info_column, new_info_val,
                                                    inx_indiv_id_starts, lst_alt_frq_val, lst_input_fh)
             # Write merged line to output file
-            fh_output.write(merged_line.encode())
-            fh_output.write('\n'.encode())
+            fh_output.write(merged_line)
+            fh_output.write('\n')
 
             # Keep console busy
             count += 1
-            if count%5000 == 0: print('. {} variants merged'.format(count))
-            elif count%100 == 0: print('.', end='', flush=True)
-            elif count%5000 == 1: print('\t', end='', flush=True)
+            if count%100 == 0:
+                progress_bar(count)
+            # if count%5000 == 0: print('. {} variants merged'.format(count))
+            # elif count%100 == 0: print('.', end='', flush=True)
+            # elif count%5000 == 1: print('\t', end='', flush=True)
         else:
             print('\n\tEnd of snp to be kept file, total of {} variants merged'.format(count))
             break  # If reach end of SNP to be kept, then stop
     # Close file handles when done
     fh_snp_kept.close()
+
 
 # ----------------------- End of helper functions -----------------------
 
@@ -262,12 +275,11 @@ def run_merge_files():
     # Store file handles of input files in a list for iteration
     lst_input_fn = dict_flags['--input']
     lst_input_fh = []  # a list to store file handles of input files
-    for fn in lst_input_fn: lst_input_fh.append(xopen(fn, threads=dict_flags['--thread']-1)) # threads=0 is valid for xopen (ie. no external process is used)
+    for fn in lst_input_fn: lst_input_fh.append(xopen(fn, threads=dict_flags['--thread'])) # threads=0 is valid for xopen (ie. no external process is used)
     # File handle for output
     # output_fn = dict_flags['--output'] + '.dose.vcf.gz' # Do not always need this dose suffix
     output_fn = dict_flags['--output'] + '.vcf.gz'
-    fh_output_raw = open(output_fn, 'wb')  # Open for writing (appending), use bgzip module later to write
-    fh_output = bgzip.BGZipWriter(fh_output_raw)
+    fh_output = PipedCompressionWriter(path=output_fn, threads_flag="-@", program_args=[dict_flags['--write_with']], threads=dict_flags['--thread'])
 
     # 2. Merge header lines and write to output file (row 0-18 in this version (2021/07,v1))
     # Also Get index number of some columns:
@@ -282,7 +294,6 @@ def run_merge_files():
     merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, fh_output)
     for fh in lst_input_fh: fh.close()
     fh_output.close()
-    fh_output_raw.close()
 
     # Print out execution time
     print_execution_time(start_time)

@@ -25,13 +25,15 @@
 #   Default is 0. Defines number of duplicated individuals in each input file.
 #   Duplicated IDs should be the first N columns in each file and not mixed with unique IDs.
 #   Starting from the second input file, data of the first N individuals will be skipped in the merged output
+# --write_with: (optional)
+#   Default is bcftools. Write to bgziped file with bcftools. User can supply specific path to bcftools such as /user/bin/bcftools
+#   Use --write_with "/data100t1/gapps/htslib-1.9/bgzip" for our server
 import argparse
-import os.path
 
 def process_args():
     parser = argparse.ArgumentParser()
-    lst_args = ['--input', '--output', '--thread', '--missing', '--na_rep',
-                '--r2_threshold', '--r2_output', '--r2_cap', '--duplicate_id']
+    lst_args = ['--input', '--output', '--thread', '--missing', '--na_rep', '--r2_threshold', '--r2_output',
+                '--r2_cap', '--duplicate_id', '--write_with']
     # Help messages of each option
     dict_help = {
         '--input': '(Required) Files to be merged, multiple files are allowed. Must in gzipped or bgziped VCF format',
@@ -42,7 +44,8 @@ def process_args():
         '--r2_threshold': '(Optional) Default is 0, ie. no filtering. Only variants with combined imputation quality r2≥r2_threshold will be saved in the merged file',
         '--r2_output': '(Optional) Default is "first". Defines how r2 is calculated in the output file. Valid values are: first, mean, weighted_average, z_transformation, min, max',
         '--r2_cap': '(Optional) Adjust R squared by --r2_cap if Rsq=1. Only valid for z transformation to avoid infinity',
-        '--duplicate_id': '(Optional) Default is 0. Defines number of duplicated individuals in each input file. Duplicated IDs should be the first N columns in each file'}
+        '--duplicate_id': '(Optional) Default is 0. Defines number of duplicated individuals in each input file. Duplicated IDs should be the first N columns in each file',
+        '--write_with': '(Optional) Default is bcftools. Write to bgziped file with bcftools. User can supply specific path to bcftools such as /user/bin/bcftools'}
 
     # Default values and data types of optional flags
     dict_default = {'--output': ['merged', str],
@@ -52,7 +55,8 @@ def process_args():
                     '--r2_threshold': [0, int],
                     '--r2_output': ['first', str],
                     '--r2_cap': [10e-4, float],
-                    '--duplicate_id': [0, int]}
+                    '--duplicate_id': [0, int],
+                    '--write_with':['bcftools', str]}
     # Add arguments
     for arg in lst_args:  # If user provide arguments not in the list, they will not be used (and no error message)
         if arg == '--input':
@@ -70,10 +74,6 @@ def process_args():
         print('Error: Invalid value of --input:', dict_flags['--input'])
         print('\t- At least two files are needed to merge\nExit')
         exit()
-    for fn in dict_flags['--input']:
-        if not os.path.exists(fn): # Check if input files exist
-            print('Error:', fn, 'does not exist\nExit')
-            exit()
 
     # Check --thread
     if dict_flags['--thread'] <= 0: dict_flags['--thread'] = 1  # Assign 1 to --thread if user supplied a value<=0
@@ -112,7 +112,7 @@ def process_args():
     for k, v in dict_flags.items():
         if k == '--na_rep' and dict_flags['--missing'] == 0:
             print('\t' + k, v, '(ignored since --missing is 0)')
-        if k == '--r2_cap' and dict_flags['--r2_output'] != 'z_transformation':
+        elif k == '--r2_cap' and dict_flags['--r2_output'] != 'z_transformation':
             print('\t' + k, v, '(ignored since --r2_output is not z_transformation)')
         else:
             print('\t' + k, v)

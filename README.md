@@ -1,4 +1,4 @@
-# TOPMed_merge
+# IMMerge
 
 ## Required packages and versions
 1. This project is built with python 3.7.x and below packages: (python 3.9 and 3.10 are also verified to work)
@@ -62,7 +62,7 @@
 ## Example code
 Here is an example using sample data in ```./data_sample/```, output files are saved in ```./output_sample/```.
 ```bash
-cd TOPMed_merge
+cd IMMerge
 python src/merge_files.py \
 	--input data_sample/sample_group1.dose.vcf.gz data_sample/sample_group2.dose.vcf.gz data_sample/sample_group3.dose.vcf.gz \
 	--output output_sample/merged_sample \

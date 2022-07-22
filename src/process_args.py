@@ -56,7 +56,7 @@ def process_args():
                     '--r2_output': ['first', str],
                     '--r2_cap': [10e-4, float],
                     '--duplicate_id': [0, int],
-                    '--write_with':['bcftools', str]}
+                    '--write_with':['bgzip', str]}
     # Add arguments
     for arg in lst_args:  # If user provide arguments not in the list, they will not be used (and no error message)
         if arg == '--input':

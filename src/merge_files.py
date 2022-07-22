@@ -54,7 +54,7 @@ lst_number_of_individuals, number_snps_kept = get_SNP_list.get_snp_list(dict_fla
 # - total: total number of SNPs need to be precessed
 def progress_bar(progres, total=number_snps_kept):
     percent = 100 * (progres/total)
-    bar = '=' * int(percent) + ' ' * int(100 - percent)
+    bar = '=' * int(percent) + '-' * int(100 - percent)
     print(f'|{bar}| {percent:.2f}%', end='\r')
 
 
@@ -212,7 +212,7 @@ def merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, 
     # - ie, use these columns in variant_kept.txt file: ALT_Frq_combined, MAF_combined, Rsq_combined, Genotyped
     count = 0  # For console output
     fh_snp_kept = open(dict_flags['--output']+'_variants_kept.txt')
-    print('\t'+dict_flags['--output']+'_variants_kept.txt file loaded')
+    print('\t'+dict_flags['--output']+'_variants_kept.txt file loaded\n')
 
     # Read the first line (header), find index of combined ALT_freq, MAF, Rsq
     line = fh_snp_kept.readline().strip().split()
@@ -254,13 +254,11 @@ def merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, 
 
             # Keep console busy
             count += 1
-            if count%100 == 0:
-                progress_bar(count)
-            # if count%5000 == 0: print('. {} variants merged'.format(count))
-            # elif count%100 == 0: print('.', end='', flush=True)
-            # elif count%5000 == 1: print('\t', end='', flush=True)
+            if count%100 == 0: progress_bar(count)
         else:
-            print('\n\tEnd of snp to be kept file, total of {} variants merged'.format(count))
+            bar = '=' * 100 # Complete progress bar, fill with 100%
+            print(f'|{bar}| 100.00%', end='\r')
+            print('\nEnd of snp to be kept file, total of {} variants merged'.format(count))
             break  # If reach end of SNP to be kept, then stop
     # Close file handles when done
     fh_snp_kept.close()

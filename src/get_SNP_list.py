@@ -298,7 +298,7 @@ def __process_output(df_merged, dict_flags, lst_index_col_names):
     with open(log_fn, 'a') as log_fh:
         log_fh.write('\nNumbers of individuals in each input file: '+str(lst_number_of_individuals))
 
-    return lst_number_of_individuals, str(df_merged[mask_to_keep].shape[0]) # Return list of number of individuals and number of SNPs kept
+    return lst_number_of_individuals, df_merged[mask_to_keep].shape[0] # Return list of number of individuals and number of SNPs kept
 # ---------------- End opf helper functions -----------------
 
 # A wrapper function to run this script

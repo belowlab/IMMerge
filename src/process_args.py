@@ -52,7 +52,7 @@ def process_args():
                     '--thread': [1, int],
                     '--missing': [0, int],
                     '--na_rep': ['.', str],
-                    '--r2_threshold': [0, int],
+                    '--r2_threshold': [0, float],
                     '--r2_output': ['first', str],
                     '--r2_cap': [10e-4, float],
                     '--duplicate_id': [0, int],

@@ -48,7 +48,7 @@ with open(log_fn, 'w') as log_fh:
 check_r2_setting_for_imputation.check_imputatilson_parameters(lst_fn=dict_flags['--input'])
 lst_number_of_individuals, number_snps_kept = get_SNP_list.get_snp_list(dict_flags)
 
-# ----------------------- Helper functions -----------------------
+# ################################ Helper functions ################################
 # Print progress par in console
 # - progress: current progress (number of SNPs processed)
 # - total: total number of SNPs need to be precessed
@@ -264,7 +264,7 @@ def merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, 
     fh_snp_kept.close()
 
 
-# ----------------------- End of helper functions -----------------------
+# ################################ End of helper functions ################################
 
 # A function to run each step all together
 def run_merge_files():
@@ -296,7 +296,7 @@ def run_merge_files():
     # Print out execution time
     print_execution_time(start_time)
 
-# ----------------- Profile memory usage ---------------------
+# ################################ Profile memory usage ################################
 '''from memory_profiler import profile
 
 @profile

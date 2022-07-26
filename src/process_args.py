@@ -1,4 +1,4 @@
-# This function process user input from command line
+# This script process user input from command line
 # Return parsed flags in a dictionary (dict_flags)
 # Possible flags are:
 # --input: (Required) input file names
@@ -38,14 +38,14 @@ def process_args():
     dict_help = {
         '--input': '(Required) Files to be merged, multiple files are allowed. Must in gzipped or bgziped VCF format',
         '--output': '(Optional) Default is "merged". output file name without suffix',
-        '--thread': '(Optional) Default value is 1. Defines how many thread to use in multiprocessing. If number of threads > number of cpus of the system, will use number of cpus instead of user supplied value. If number of threads <0, will use 1 instead of user supplied value.',
+        '--thread': '(Optional) Default value is 1. Defines how many thread to use in multiprocessing. If number of threads <0, will use 1 instead of user supplied value.',
         '--missing': '(Optional) Default is 0. Defines number of missing values allowed for each variant',
         '--na_rep': '(Optional) Default is ".|.". Defines what symbol to use for missing values. This flag is ignored if --missing is 0',
         '--r2_threshold': '(Optional) Default is 0, ie. no filtering. Only variants with combined imputation quality r2≥r2_threshold will be saved in the merged file',
-        '--r2_output': '(Optional) Default is "first". Defines how r2 is calculated in the output file. Valid values are: first, mean, weighted_average, z_transformation, min, max',
-        '--r2_cap': '(Optional) Adjust R squared by --r2_cap if Rsq=1. Only valid for z transformation to avoid infinity',
+        '--r2_output': '(Optional) Default is "first". Defines how r2 is calculated in the output file. Valid values are: {first|mean|weighted_average|z_transformation|min|max}',
+        '--r2_cap': '(Optional) Adjust R squared by --r2_cap if imputation quality Rsq=1. Only valid for z transformation to avoid infinity',
         '--duplicate_id': '(Optional) Default is 0. Defines number of duplicated individuals in each input file. Duplicated IDs should be the first N columns in each file',
-        '--write_with': '(Optional) Default is bcftools. Write to bgziped file with bcftools. User can supply specific path to bcftools such as /user/bin/bcftools'}
+        '--write_with': '(Optional) Default is bgzip. Write to bgziped file with bgzip. User can supply specific path to bgzip such as /user/bin/bgzip'}
 
     # Default values and data types of optional flags
     dict_default = {'--output': ['merged', str],
@@ -63,12 +63,13 @@ def process_args():
             parser.add_argument(arg, help=dict_help[arg], nargs='*', required=True)
         else:
             parser.add_argument(arg, help=dict_help[arg], default=dict_default[arg][0], type=dict_default[arg][1])
+    parser.print_help() # Print help message
     args = parser.parse_args()
     dict_flags = {}  # Store arguments in a dictionary to return
     for arg in lst_args:
         dict_flags[arg] = eval('args.' + arg[2:])
 
-    # Sanity check (type check is taken care of by type argument of add_argument)
+    # ################ Sanity checks (type check is taken care of by type argument of add_argument) ################
     # Check --input
     if len(dict_flags['--input']) <= 1:  # Number of input files
         print('Error: Invalid value of --input:', dict_flags['--input'])

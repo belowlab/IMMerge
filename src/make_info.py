@@ -10,7 +10,7 @@ parser.add_argument('--input', nargs='*', type=str, required=True,
                     help='(Required) Multiple input files are allowed. Must in gzipped or bgziped VCF format')
 parser.add_argument('--output_dir', type=str, default='',
                     help='(Optional) Directory for output files. Default is current working directory.')
-parser.add_argument('--output_fn', type=str,
+parser.add_argument('--output_fn', type=str, nargs='*',
                     help='(Optional) Default is input file name with suffix replaced by ".info.gz".')
 parser.add_argument('--col_names', nargs='*', default=['AF', 'MAF', 'R2', 'IMPUTED/TYPED/TYPED_ONLY'],
                     help="(Optional) Default is ['AF', 'MAF', 'R2', 'IMPUTED/TYPED/TYPED_ONLY']. Column names of alt frequency, MAF, imputation quality score, genotyped. Separated by space")

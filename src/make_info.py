@@ -120,7 +120,9 @@ for i in range(len(args.input)):
         if args.verbose:
             print(f'#### Processing files: Indices of columns (name (index)): ID ({idx_snp}); REF ({idx_ref}); ALT ({idx_alt}); INFO ({idx_info})')
             print(f'#### Processing files: Indices of fields in INFO column (name (default name) (index)): {args.col_names[0]} (AF) ({idx_alt_frq}); {args.col_names[1]} (MAF) ({idx_maf}); {args.col_names[2]} (R2) ({idx_rsq}); {args.col_names[3]} (IMPUTED/TYPED/TYPED_ONLY) ({idx_genotyped})')
+            print(f'#### Processing files: Loop through input file')
 
+        count = 0
         while line != '':
             tmp_lst = line.split()
             snp = tmp_lst[idx_snp]
@@ -132,6 +134,14 @@ for i in range(len(args.input)):
             rsq = info_val[idx_rsq].split('=')[1]
             genotyped = info_val[idx_genotyped]
             output_fh.write(f'{snp}\t{ref}\t{alt}\t{alt_frq}\t{maf}\t{rsq}\t{genotyped}\n')
+            count += 1
+            if args.verbose:
+                print('\t')
+                if count%1000 == 0:
+                    print('.', end='', flush=True)
+                if count%5000 == 0:
+                    print(f'{count} lines processed')
+                    print('\t')
             line = input_fh.readline().strip()
     output_fh.close()
     if args.verbose:

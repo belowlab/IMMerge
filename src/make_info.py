@@ -136,12 +136,10 @@ for i in range(len(args.input)):
             output_fh.write(f'{snp}\t{ref}\t{alt}\t{alt_frq}\t{maf}\t{rsq}\t{genotyped}\n')
             count += 1
             if args.verbose:
-                print('\t')
                 if count%1000 == 0:
                     print('.', end='', flush=True)
                 if count%5000 == 0:
                     print(f'{count} lines processed')
-                    print('\t')
             line = input_fh.readline().strip()
     output_fh.close()
     if args.verbose:

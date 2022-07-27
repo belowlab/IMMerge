@@ -138,10 +138,10 @@ for i in range(len(args.input)):
             if args.verbose:
                 if count%1000 == 0:
                     print('.', end='', flush=True)
-                if count%5000 == 0:
+                if count%50000 == 0:
                     print(f'{count} lines processed')
             line = input_fh.readline().strip()
     output_fh.close()
     if args.verbose:
-        print(f'#### Processing files: Done. input={args.input[i]}')
+        print(f'\n#### Processing files: Done. input={args.input[i]}')
 

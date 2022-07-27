@@ -12,6 +12,7 @@
 import pandas as pd
 import gzip
 import numpy as np
+import os
 
 # This function returns a list of DataFrames read from .info.gz files
 # Parameter:
@@ -20,14 +21,11 @@ def __get_lst_info_df(dict_flags):
     # Get a list of names for .info.gz file based on names of input files (change suffix)
     # .info.gz and .dose.vcf.gz should be the same beside suffix
     print('\nBelow .info.gz files will be used:')
-    lst_info_fn = []
-    for fn in dict_flags['--input']:
-        info_fn = fn.split('.')[0] + '.info.gz'
-        lst_info_fn.append(info_fn)
-        print('\t' + info_fn)
+    for fn in dict_flags['--info']:
+        print('\t' + fn)
 
     lst_info_df = []  # A list to store .info.gz DataFrames
-    for info_fn in lst_info_fn:
+    for info_fn in dict_flags['--info']:
         try:
             df = pd.read_csv(info_fn, sep='\t', compression='gzip', dtype='str')
             lst_info_df.append(df)

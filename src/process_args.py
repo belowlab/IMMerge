@@ -29,26 +29,30 @@
 #   Default is bcftools. Write to bgziped file with bcftools. User can supply specific path to bcftools such as /user/bin/bcftools
 #   Use --write_with "/data100t1/gapps/htslib-1.9/bgzip" for our server
 import argparse
+import os
 
 def process_args():
     parser = argparse.ArgumentParser()
-    lst_args = ['--input', '--output', '--thread', '--missing', '--na_rep', '--r2_threshold', '--r2_output',
-                '--r2_cap', '--duplicate_id', '--write_with']
+    lst_args = ['--input', '--info', '--output', '--thread', '--missing', '--na_rep', '--r2_threshold', '--r2_output',
+                '--r2_cap', '--duplicate_id', '--write_with', '--verbose']
     # Help messages of each option
     dict_help = {
         '--input': '(Required) Files to be merged, multiple files are allowed. Must in gzipped or bgziped VCF format',
+        '--info': '(Optional) Directories and name to info files. Default path is the same directory as corresponding input file, default info file share the same name as input file, except for suffix (.info.gz)',
         '--output': '(Optional) Default is "merged". output file name without suffix',
         '--thread': '(Optional) Default value is 1. Defines how many thread to use in multiprocessing. If number of threads <0, will use 1 instead of user supplied value.',
         '--missing': '(Optional) Default is 0. Defines number of missing values allowed for each variant',
-        '--na_rep': '(Optional) Default is ".|.". Defines what symbol to use for missing values. This flag is ignored if --missing is 0',
+        '--na_rep': '(Optional) Default is "." (ie. ".|." for genotype values). Defines what symbol to use for missing values. This flag is ignored if --missing is 0',
         '--r2_threshold': '(Optional) Default is 0, ie. no filtering. Only variants with combined imputation quality r2≥r2_threshold will be saved in the merged file',
         '--r2_output': '(Optional) Default is "first". Defines how r2 is calculated in the output file. Valid values are: {first|mean|weighted_average|z_transformation|min|max}',
         '--r2_cap': '(Optional) Adjust R squared by --r2_cap if imputation quality Rsq=1. Only valid for z transformation to avoid infinity',
         '--duplicate_id': '(Optional) Default is 0. Defines number of duplicated individuals in each input file. Duplicated IDs should be the first N columns in each file',
-        '--write_with': '(Optional) Default is bgzip. Write to bgziped file with bgzip. User can supply specific path to bgzip such as /user/bin/bgzip'}
+        '--write_with': '(Optional) Default is bgzip. Write to bgziped file with bgzip. User can supply specific path to bgzip such as /user/bin/bgzip',
+        '--verbose': '(Optional) Default is False. Print more messages. Valid values are (not case-sensitive): {false|true|0|1}'}
 
     # Default values and data types of optional flags
-    dict_default = {'--output': ['merged', str],
+    dict_default = {'--info': ['', str],
+                    '--output': ['merged', str],
                     '--thread': [1, int],
                     '--missing': [0, int],
                     '--na_rep': ['.', str],
@@ -56,18 +60,45 @@ def process_args():
                     '--r2_output': ['first', str],
                     '--r2_cap': [10e-4, float],
                     '--duplicate_id': [0, int],
-                    '--write_with':['bgzip', str]}
+                    '--write_with':['bgzip', str],
+                    '--verbose': ['0', str]}
     # Add arguments
     for arg in lst_args:  # If user provide arguments not in the list, they will not be used (and no error message)
         if arg == '--input':
             parser.add_argument(arg, help=dict_help[arg], nargs='*', required=True)
+        elif arg == '--info':
+            parser.add_argument(arg, help=dict_help[arg], nargs='*', default='')
         else:
             parser.add_argument(arg, help=dict_help[arg], default=dict_default[arg][0], type=dict_default[arg][1])
-    parser.print_help() # Print help message
+
     args = parser.parse_args()
+
+    # Convert verbose to boolean
+    if args.verbose.upper()=='FALSE' or args.verbose=='0':
+        args.verbose = False
+    else:
+        args.verbose = True
+
+    # Add values to --info if not provided by user
+    if args.info=='':
+        args.info = []
+        for val in args.input:
+            path, fn = os.path.split(val)
+            info_fn = fn.split('.')[0] + '.info.gz'
+            args.info.append(os.path.join(path, info_fn))
+
     dict_flags = {}  # Store arguments in a dictionary to return
     for arg in lst_args:
         dict_flags[arg] = eval('args.' + arg[2:])
+
+    # Print flags and values loaded
+    for k, v in dict_flags.items():
+        if k == '--na_rep' and dict_flags['--missing'] == 0:
+            print('\t' + k, v, '(ignored since --missing is 0)')
+        elif k == '--r2_cap' and dict_flags['--r2_output'] != 'z_transformation':
+            print('\t' + k, v, '(ignored since --r2_output is not z_transformation)')
+        else:
+            print('\t' + k, v)
 
     # ################ Sanity checks (type check is taken care of by type argument of add_argument) ################
     # Check --input
@@ -75,6 +106,25 @@ def process_args():
         print('Error: Invalid value of --input:', dict_flags['--input'])
         print('\t- At least two files are needed to merge\nExit')
         exit()
+    for val in dict_flags['--input']: # Check if file exists
+        if not os.path.isfile(val):
+            print(f"Error: Input file not found: {val}")
+            exit()
+
+    # Check --info
+    if len(dict_flags['--input']) != len(dict_flags['--info']):
+        print(f"Error: number of input files ({len(dict_flags['--input'])}) does not match number of info files ({len(dict_flags['--info'])}).\nExit")
+        exit()
+    for info_file in dict_flags['--info']:
+        if not os.path.isfile(info_file):
+            print(f"Error: Info file ({info_file}) does not exist.\nExit")
+            exit()
+
+    # Check --output
+    path, fn = os.path.split(dict_flags['--output'])
+    if not os.path.isdir(path): # Create output directory if does not exist
+        os.mkdir(path)
+    dict_flags['--output'] = dict_flags['--output'] + os.path.splitext(dict_flags['--input'][0])[1] # Add suffix of the first input to output file name
 
     # Check --thread
     if dict_flags['--thread'] <= 0: dict_flags['--thread'] = 1  # Assign 1 to --thread if user supplied a value<=0
@@ -109,14 +159,6 @@ def process_args():
         print('\t- Value of --duplicate_id should be an integer between 0 and number of individuals\nExit')
         exit()
 
-    # If no error raised up to here, print flags and values used
-    for k, v in dict_flags.items():
-        if k == '--na_rep' and dict_flags['--missing'] == 0:
-            print('\t' + k, v, '(ignored since --missing is 0)')
-        elif k == '--r2_cap' and dict_flags['--r2_output'] != 'z_transformation':
-            print('\t' + k, v, '(ignored since --r2_output is not z_transformation)')
-        else:
-            print('\t' + k, v)
-
+    # If no error raised up to here, return flags
     return dict_flags
 

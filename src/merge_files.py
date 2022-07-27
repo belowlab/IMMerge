@@ -3,7 +3,7 @@
 # The goal is to combine post-imputation vcf.gz files into one vcf.gz file
 
 from xopen import PipedCompressionWriter, xopen # Faster than gzip
-# import sys
+# import os
 import process_args
 import get_SNP_list
 import check_r2_setting_for_imputation
@@ -104,18 +104,18 @@ def merge_header_lines(lst_input_fh, fh_output, number_of_dup_id=dict_flags['--d
                 line = fh.readline().strip()
         else:  # If column header line, then merge and write (line starts with single #)
             # Add a few lines about how this file is generated (with '##')
-            extra_info_line = '\n##VCFmerge=<Input files='
+            extra_info_line = '\n##IMMerge=<Input files='
             for i in dict_flags['--input']: # Write input file names
                 if '/' in i: # remove directory if possible, only use file names
                     i = i.split('/')[-1]
                 extra_info_line = extra_info_line + i + ', '
             extra_info_line = extra_info_line[:-2]+'>' # Remove the last ', '
             fh_output.write((extra_info_line + '\n'))
-            fh_output.write(('##VCFmerge=<Date=' + time.strftime('%a, %d %b %Y %H:%M:%S', time.localtime()) + '>\n'))
-            fh_output.write(('##VCFmerge=<Missing=' + str(dict_flags['--missing']) + ', duplicate_id='+str(dict_flags['--duplicate_id'])+', na_rep='+dict_flags['--na_rep']+'>\n'))
-            # fh_output.write(('##VCFmerge=<Rsq filter=' + str(dict_flags['--r2_threshold']) + '>\n'))
-            fh_output.write(('##VCFmerge=<Merged MAF=weighted average, Merged AF=weighted average>\n'))
-            fh_output.write(('##VCFmerge=<Merged Rsq=' + dict_flags['--r2_output'] + ', Rsq filter=' + str(
+            fh_output.write(('##IMMmerge=<Date=' + time.strftime('%a, %d %b %Y %H:%M:%S', time.localtime()) + '>\n'))
+            fh_output.write(('##IMMmerge=<Missing=' + str(dict_flags['--missing']) + ', duplicate_id='+str(dict_flags['--duplicate_id'])+', na_rep='+dict_flags['--na_rep']+'>\n'))
+            # fh_output.write(('##IMMmerge=<Rsq filter=' + str(dict_flags['--r2_threshold']) + '>\n'))
+            fh_output.write(('##IMMmerge=<Merged MAF=weighted average, Merged AF=weighted average>\n'))
+            fh_output.write(('##IMMmerge=<Merged Rsq=' + dict_flags['--r2_output'] + ', Rsq filter=' + str(
                 dict_flags['--r2_threshold']) + '>\n+'))
 
             # In current TOPMed version these are columns of shared information, then followed by individual IDs:

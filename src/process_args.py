@@ -34,7 +34,7 @@ import os
 def process_args():
     parser = argparse.ArgumentParser()
     lst_args = ['--input', '--info', '--output', '--thread', '--missing', '--na_rep', '--r2_threshold', '--r2_output',
-                '--r2_cap', '--duplicate_id', '--write_with', '--verbose']
+                '--r2_cap', '--duplicate_id', '--write_with', '--meta_info', '--verbose']
     # Help messages of each option
     dict_help = {
         '--input': '(Required) Files to be merged, multiple files are allowed. Must in gzipped or bgziped VCF format',
@@ -44,30 +44,35 @@ def process_args():
         '--missing': '(Optional) Default is 0. Defines number of missing values allowed for each variant',
         '--na_rep': '(Optional) Default is "." (ie. ".|." for genotype values). Defines what symbol to use for missing values. This flag is ignored if --missing is 0',
         '--r2_threshold': '(Optional) Default is 0, ie. no filtering. Only variants with combined imputation quality r2≥r2_threshold will be saved in the merged file',
-        '--r2_output': '(Optional) Default is "z_transformation". Defines how r2 is calculated in the output file. Valid values are: {first|mean|weighted_average|z_transformation|min|max}',
+        '--r2_output': '(Optional) Default is "z_transformation". Defines how imputation quality score is calculated in the output file.',
         '--r2_cap': '(Optional) Adjust R squared by --r2_cap if imputation quality Rsq=1. Only valid for z transformation to avoid infinity',
         '--duplicate_id': '(Optional) Default is 0. Defines number of duplicated individuals in each input file. Duplicated IDs should be the first N columns in each file',
         '--write_with': '(Optional) Default is bgzip. Write to bgziped file with bgzip. User can supply specific path to bgzip such as /user/bin/bgzip',
-        '--verbose': '(Optional) Default is False. Print more messages. Valid values are (not case-sensitive): {false|true|0|1}'}
+        '--meta_info': "(Optional) Valid values are {index of input file (1-based), 'none', 'all'}. What meta information (lines start with '##') to include in output file. Default is 1 (meta information from the first input file)",
+        '--verbose': '(Optional) Default is False. Print more messages.'}
 
     # Default values and data types of optional flags
+    # --r2_output and --verbose also have choices from limited values
     dict_default = {'--info': ['', str],
                     '--output': ['merged', str],
                     '--thread': [1, int],
                     '--missing': [0, int],
                     '--na_rep': ['.', str],
                     '--r2_threshold': [0, float],
-                    '--r2_output': ['z_transformation', str],
+                    '--r2_output': ['z_transformation', str, ['first', 'mean', 'weighted_average', 'z_transformation', 'min', 'max']],
                     '--r2_cap': [10e-4, float],
                     '--duplicate_id': [0, int],
                     '--write_with':['bgzip', str],
-                    '--verbose': ['0', str]}
+                    '--meta_info':['1', str],
+                    '--verbose': ['0', str, ['false', '0', 'true', '1']]}
     # Add arguments
     for arg in lst_args:  # If user provide arguments not in the list, they will not be used (and no error message)
         if arg == '--input':
             parser.add_argument(arg, help=dict_help[arg], nargs='*', required=True)
         elif arg == '--info':
             parser.add_argument(arg, help=dict_help[arg], nargs='*', default='')
+        elif arg == '--r2_output' or arg == '--verbose':
+            parser.add_argument(arg, help=dict_help[arg], default=dict_default[arg][0], type=dict_default[arg][1], choices=dict_default[arg][2])
         else:
             parser.add_argument(arg, help=dict_help[arg], default=dict_default[arg][0], type=dict_default[arg][1])
 
@@ -140,11 +145,11 @@ def process_args():
         print('\t- Value of --r2_threshold should be numeric between 0 and 1\nExit')
         exit()
 
-    # Check --r2_output
-    if dict_flags['--r2_output'] not in ['first', 'weighted_average', 'z_transformation', 'mean', 'min', 'max']:
-        print('Error: Invalid value of --r2_output:', dict_flags['--r2_output'])
-        print('\t- Value of --r2_output should be: first, weighted_average, z_transformation, mean, min or max\nExit')
-        exit()
+    # # Check --r2_output
+    # if dict_flags['--r2_output'] not in ['first', 'weighted_average', 'z_transformation', 'mean', 'min', 'max']:
+    #     print('Error: Invalid value of --r2_output:', dict_flags['--r2_output'])
+    #     print('\t- Value of --r2_output should be: first, weighted_average, z_transformation, mean, min or max\nExit')
+    #     exit()
 
     # Check --r2_cap
     if dict_flags['--r2_cap'] <0 or dict_flags['--r2_cap']>=1:
@@ -156,6 +161,19 @@ def process_args():
     if dict_flags['--duplicate_id'] < 0:
         print('Error: Invalid value of --duplicate_id:', dict_flags['--duplicate_id'])
         print('\t- Value of --duplicate_id should be an integer between 0 and number of individuals\nExit')
+        exit()
+
+    # Check --meta_info
+    meta_flag = True
+    if dict_flags['--meta_info'].isnumeric():
+        dict_flags['--meta_info'] = int(dict_flags['--meta_info'])
+        if dict_flags['--meta_info'] <= 0 or dict_flags['--meta_info']>len(dict_flags['--input'] ):
+            meta_flag = False
+    elif dict_flags['--meta_info'] != 'none' and dict_flags['--meta_info'] != 'all':
+        meta_flag = False
+    if not meta_flag:
+        print('Error: Invalid value of --meta_info:', dict_flags['--meta_info'])
+        print('\t- Value of --meta_info should be an integer indicating index (1-based) of input file, "none", or "all"\nExit')
         exit()
 
     # If no error raised up to here, return flags

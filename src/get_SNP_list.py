@@ -196,8 +196,8 @@ def __calculate_r2_maf_altFrq(df_merged, col_name_r2_combined,
 #  - Two text files saved in current directory: variants_kept.txt and variants_excluded.txt
 def __process_output(df_merged, dict_flags, lst_index_col_names):
     # Set output file names
-    to_keep_fn = dict_flags['--output']+'_variants_kept.txt'
-    to_exclude_fn = dict_flags['--output']+'_variants_excluded.txt'
+    to_keep_fn = dict_flags['--output']+'_variants_retained.info.txt'
+    to_exclude_fn = dict_flags['--output']+'_variants_excluded.info.txt'
     missing = dict_flags['--missing']
     mask_to_keep = ''   # Use this when --missing is 0
     mask_to_exclude = ''    # Use this when --missing is 0

@@ -3,7 +3,7 @@
 # The goal is to combine post-imputation vcf.gz files into one vcf.gz file
 
 from xopen import PipedCompressionWriter, xopen # Faster than gzip
-# import os
+import os
 import process_args
 import get_SNP_list
 import check_r2_setting_for_imputation
@@ -22,7 +22,7 @@ print('Job starts at (local time) ', time.strftime("%Y-%m-%d %H:%M:%S", time.loc
 # dict_flags contains values for below flags:
 #   --input, --output, --thread, --missing, --r2_threshold, --r2_output
 # dict_flags = process_args_ongoing.process_args(args) # Process terminal input
-dict_flags = process_args.process_args() # Process terminal input
+dict_flags = process_args.process_args() # Process terminal input, can use it as a global variable
 
 # Write some info into a log file
 log_fn = dict_flags['--output'] + '.log' # Save Important processing info into a .log file for user reference
@@ -75,67 +75,77 @@ def print_execution_time(satrt_time):
         log_fh.write('\n\nDuration: {:.2f} hours, {:.2f} minutes, {:.2f} seconds'.format(hours, minutes, seconds))
         log_fh.write('\n\nEnd of run')
 
+# This function writes IMMerge arguments in to meta information of merged output
+# Lines start with "##"
+def write_args(fh_output):
+    fh_output.write(('##IMMmerge=<Date=' + time.strftime('%a, %d %b %Y %H:%M:%S', time.localtime()) + '>\n'))
+    for k, v in dict_flags.items():
+        if k=='--input' or k=='--info':
+            fh_output.write(f'##IMMmerge=<{k[2:]}=')
+            for fn in v:
+                fn = os.path.split(fn)[1]
+                fh_output.write(f'{fn} ')
+            fh_output.write('>\n')
+        else:
+            fh_output.write(f'##IMMmerge=<{k[2:]}={v}>\n')
+
 # Merge header lines of input files (.dose.vcf.gz) together and write into a BGZF file (bgzip file)
 # Parameters:
-# - number_of_dup_id：User provided number of duplicated IDs in each sub input file
 # - fh_output_raw: file handle of output file (need to use bgzip module for actual writing)
 # - lst_input_fh: list of file handles of input files
-def merge_header_lines(lst_input_fh, fh_output, number_of_dup_id=dict_flags['--duplicate_id']):
-    # # Read in SNPs (with corresponding combined MAF and r2) need to be kept from file
-    # lst_snp, lst_alt_frq, lst_maf, lst_r2 = get_snp_and_info_lst()
-
-    # Read trough header lines (line start with ##) and write into output file
-    # Process all files at the same time. All input files should have the same number of header lines
-    line = ''
-    for fh in lst_input_fh:  # Read the 1st line of all input files
-        line = fh.readline().strip()
-
-    # Use encode() to convert string to byte
-    # This is to make sure bgzip module works, since it uses bytearray to write
-    fh_output.write(line)
-    line = lst_input_fh[0].readline().strip()  # Read the 2nd line of the first input files
-
-    inx_indiv_id_starts = 0  # From which column genotype data starts
-    inx_info_column = 0 # Find index of column "INFO", in order to replace values later
-    while line[0] == '#': # Info and header lines all start with "#"
-        if line[0:2] == '##':  # If Info lines, write everything directly
-            fh_output.write(('\n' + line))
-            for fh in lst_input_fh[1:]:  # Read the rest file handles, but do not need to write them
+def merge_header_lines(lst_input_fh, fh_output):
+    # Read trough info lines (line start with ##) and write into output file
+    # Process all files at the same time. DO NOT assume All input files have the same number of info lines
+    lst_column_header = [] # Store lines for column headers of each input files
+    if dict_flags['--meta_info'] == 'none': # Do not include any meta information
+        for fh in lst_input_fh:
+            # Read lines until reach column header line (starts with "#")
+            line = fh.readline().strip()
+            while line[:2] == '##':
                 line = fh.readline().strip()
-        else:  # If column header line, then merge and write (line starts with single #)
-            # Add a few lines about how this file is generated (with '##')
-            extra_info_line = '\n##IMMerge=<Input files='
-            for i in dict_flags['--input']: # Write input file names
-                if '/' in i: # remove directory if possible, only use file names
-                    i = i.split('/')[-1]
-                extra_info_line = extra_info_line + i + ', '
-            extra_info_line = extra_info_line[:-2]+'>' # Remove the last ', '
-            fh_output.write((extra_info_line + '\n'))
-            fh_output.write(('##IMMmerge=<Date=' + time.strftime('%a, %d %b %Y %H:%M:%S', time.localtime()) + '>\n'))
-            fh_output.write(('##IMMmerge=<Missing=' + str(dict_flags['--missing']) + ', duplicate_id='+str(dict_flags['--duplicate_id'])+', na_rep='+dict_flags['--na_rep']+'>\n'))
-            # fh_output.write(('##IMMmerge=<Rsq filter=' + str(dict_flags['--r2_threshold']) + '>\n'))
-            fh_output.write(('##IMMmerge=<Merged MAF=weighted average, Merged AF=weighted average>\n'))
-            fh_output.write(('##IMMmerge=<Merged Rsq=' + dict_flags['--r2_output'] + ', Rsq filter=' + str(
-                dict_flags['--r2_threshold']) + '>\n+'))
-
-            # In current TOPMed version these are columns of shared information, then followed by individual IDs:
-            #   - CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT
-            inx_indiv_id_starts = line.split().index('FORMAT') + 1  # Find from which column genotype data starts
-            inx_info_column = line.split().index('INFO')
-            # inx_snp_id_column = line.split().index('ID')
-            print('\tIndividual genotype data starts from column #:', inx_indiv_id_starts + 1)
-            # Create merged header line, initialize with header from the first file
-            line_to_write = line
-            for fh in lst_input_fh[1:]: # Read header line from rest file handles
+            lst_column_header.append(line)
+    elif dict_flags['--meta_info'] == 'all': # Include all meta information
+        for fh in lst_input_fh:
+            # Read lines until reach column header line (starts with "#"), and write to output
+            line = fh.readline().strip()
+            while line[:2] == '##':
+                fh_output.write(line+'\n')
                 line = fh.readline().strip()
-                # Set maxsplit in slit() function to remove duplicated IDs
-                line_to_write = line_to_write + '\t' + line.split(maxsplit=number_of_dup_id + inx_indiv_id_starts)[-1]
-            fh_output.write((line_to_write + '\n'))
-            break
+            lst_column_header.append(line)
+    else: # Only include meta information from a given file by index (1-based)
+        for i in range(len(lst_input_fh)):
+            if i+1 == dict_flags['--meta_info']:
+                line = lst_input_fh[i].readline().strip()
+                while line[:2] == '##':
+                    fh_output.write(line + '\n')
+                    line = lst_input_fh[i].readline().strip()
+            else: # Ignore meta info from other input files
+                line = lst_input_fh[i].readline().strip()
+                while line[:2] == '##':
+                    line = lst_input_fh[i].readline().strip()
+            lst_column_header.append(line)
 
-        line = lst_input_fh[0].readline().strip()  # Read line of the first file to decide what to do
+    # Write IMMerge arguments after handling meta information
+    write_args(fh_output)
 
+    # Merge column headers
+    if line[0] != '#': # Sanity check
+        print('should start with #')
+
+    # In current version of VCF format (4.2) these are fixed, mandatory columns, then followed by individual IDs:
+    #   - CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT
+    inx_indiv_id_starts = line.split(maxsplit=10).index('FORMAT') + 1  # Find from which column genotype data starts
+    inx_info_column = line.split(maxsplit=10).index('INFO') # Find index of column "INFO"
+    print('\tIndividual genotype data starts from column #:', inx_indiv_id_starts + 1)
+    # Create merged header line, initialize with header from the first file
+    line_to_write = lst_column_header[0]
+    for col_header in lst_column_header[1:]:  # Process header line of remaining input files
+        # Set maxsplit in slit() function to remove duplicated IDs
+        line_to_write = line_to_write + '\t' + \
+                        col_header.split(maxsplit=dict_flags['--duplicate_id'] + inx_indiv_id_starts)[-1]
+    fh_output.write((line_to_write + '\n'))
     return inx_indiv_id_starts, inx_info_column
+
 
 # This function read line of a given file handle, until find line of given SNP (by parameter snp))
 # Return string of that line (if not found then return an empty string '')
@@ -211,8 +221,8 @@ def merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, 
     # And replace ALT_frq, MAF and r2 values in INFO column with new values calculated from all input files
     # - ie, use these columns in variant_kept.txt file: ALT_Frq_combined, MAF_combined, Rsq_combined, Genotyped
     count = 0  # For console output
-    fh_snp_kept = open(dict_flags['--output']+'_variants_kept.txt')
-    print('\t'+dict_flags['--output']+'_variants_kept.txt file loaded\n')
+    fh_snp_kept = open(dict_flags['--output']+'_variants_retained.info.txt')
+    print('\t'+dict_flags['--output']+'_variants_retained.info.txt file loaded\n')
 
     # Read the first line (header), find index of combined ALT_freq, MAF, Rsq
     line = fh_snp_kept.readline().strip().split()

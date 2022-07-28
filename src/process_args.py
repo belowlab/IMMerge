@@ -44,7 +44,7 @@ def process_args():
         '--missing': '(Optional) Default is 0. Defines number of missing values allowed for each variant',
         '--na_rep': '(Optional) Default is "." (ie. ".|." for genotype values). Defines what symbol to use for missing values. This flag is ignored if --missing is 0',
         '--r2_threshold': '(Optional) Default is 0, ie. no filtering. Only variants with combined imputation quality r2≥r2_threshold will be saved in the merged file',
-        '--r2_output': '(Optional) Default is "first". Defines how r2 is calculated in the output file. Valid values are: {first|mean|weighted_average|z_transformation|min|max}',
+        '--r2_output': '(Optional) Default is "z_transformation". Defines how r2 is calculated in the output file. Valid values are: {first|mean|weighted_average|z_transformation|min|max}',
         '--r2_cap': '(Optional) Adjust R squared by --r2_cap if imputation quality Rsq=1. Only valid for z transformation to avoid infinity',
         '--duplicate_id': '(Optional) Default is 0. Defines number of duplicated individuals in each input file. Duplicated IDs should be the first N columns in each file',
         '--write_with': '(Optional) Default is bgzip. Write to bgziped file with bgzip. User can supply specific path to bgzip such as /user/bin/bgzip',
@@ -57,7 +57,7 @@ def process_args():
                     '--missing': [0, int],
                     '--na_rep': ['.', str],
                     '--r2_threshold': [0, float],
-                    '--r2_output': ['first', str],
+                    '--r2_output': ['z_transformation', str],
                     '--r2_cap': [10e-4, float],
                     '--duplicate_id': [0, int],
                     '--write_with':['bgzip', str],
@@ -124,7 +124,6 @@ def process_args():
     path, fn = os.path.split(dict_flags['--output'])
     if not os.path.isdir(path): # Create output directory if does not exist
         os.mkdir(path)
-    dict_flags['--output'] = dict_flags['--output'] + os.path.splitext(dict_flags['--input'][0])[1] # Add suffix of the first input to output file name
 
     # Check --thread
     if dict_flags['--thread'] <= 0: dict_flags['--thread'] = 1  # Assign 1 to --thread if user supplied a value<=0

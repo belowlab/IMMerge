@@ -275,7 +275,6 @@ def run_merge_files():
     lst_input_fh = []  # a list to store file handles of input files
     for fn in lst_input_fn: lst_input_fh.append(xopen(fn, threads=dict_flags['--thread'])) # threads=0 is valid for xopen (ie. no external process is used)
     # File handle for output
-    # output_fn = dict_flags['--output'] + '.dose.vcf.gz' # Do not always need this dose suffix
     output_fn = dict_flags['--output'] + '.vcf.gz'
     fh_output = PipedCompressionWriter(path=output_fn, threads_flag="-@", program_args=[dict_flags['--write_with']], threads=dict_flags['--thread'])
 

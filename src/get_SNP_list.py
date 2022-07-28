@@ -247,9 +247,9 @@ def __process_output(df_merged, dict_flags, lst_index_col_names):
         # Save variant_kept sorted by position and index in each input file, since there could be multiple variants at the same position
         df_merged[mask_to_keep].sort_values(by=['pos', 'SNP']+lst_index_col_names)\
             .drop(columns=lst_index_col_names+['pos'])\
-            .to_csv(to_keep_fn, index=False, sep='\t', na_rep='.', float_format=float_format)
+            .to_csv(to_keep_fn, index=False, sep='\t', na_rep=dict_flags['--na_rep'], float_format=float_format)
         df_merged[mask_to_exclude].drop(columns=lst_index_col_names+['pos']).to_csv(to_exclude_fn, index=False,
-                                                                                           sep='\t', na_rep='.',
+                                                                                           sep='\t', na_rep=dict_flags['--na_rep'],
                                                                                            float_format=float_format)
         print('\tNumber of saved variants:', df_merged[mask_to_keep].shape[0])
         print('\tNumber of excluded variants:', df_merged[mask_to_exclude].shape[0])
@@ -274,9 +274,9 @@ def __process_output(df_merged, dict_flags, lst_index_col_names):
 
         df_merged.loc[mask_to_keep].sort_values(by=['pos', 'SNP'])\
                 .drop(columns=lst_index_col_names+['pos', 'missing'])\
-                .to_csv(to_keep_fn, index=False, sep='\t', na_rep='.', float_format=float_format)
+                .to_csv(to_keep_fn, index=False, sep='\t', na_rep=dict_flags['--na_rep'], float_format=float_format)
         df_merged.loc[mask_to_exclude].drop(columns=lst_index_col_names+['pos', 'missing'])\
-            .to_csv(to_exclude_fn, index=False, sep='\t', na_rep='.', float_format=float_format)
+            .to_csv(to_exclude_fn, index=False, sep='\t', na_rep=dict_flags['--na_rep'], float_format=float_format)
 
         print('\tNumber of saved variants:', df_merged.loc[mask_to_keep].shape[0])
         print('\tNumber of excluded variants:', df_merged.loc[mask_to_exclude].shape[0])

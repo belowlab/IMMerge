@@ -40,7 +40,7 @@
 1. r2
 	1. Mean: ignore missing values in calculation
 	2. Weighted average, ignore missing values in calculation
-		* $r^2_{combined} = \frac{\sum_{i=1}^{n}\ r_i^2 * N_i}{\sum_{i=1}^{n}N_i}$
+		* $$r^2_{combined} = \left( \sum_{i=1}^{n}\ r_i^2 * N_i \right) / \sum_{i=1}^{n}N_i$$
 		* $r^2_i$: Imputation quality r squared (Rsq) of the i-th input file
 		* $N_i$: Number of individuals in the N-th input file
 		* Ignore missing values. For example a variant has below r2 in each input file:
@@ -55,7 +55,7 @@
 		* Convert z back to R using tanh function: $R = \frac{e^z - e^{-z}}{e^z + e^{-z}}$
 		* Square R to get combined imputation quality
 2. MAF: weighted average, ignore missing values: Use the same equation as weighted Rsq
-	* $MAF_{combined} = \frac{\sum_{i=1}^{n}MAF_i * N_i}{\sum_{i=1}^{n}N_i}$
+	* $$MAF_{combined} = \left( \sum_{i=1}^{n}MAF_i * N_i \right) / \sum_{i=1}^{n}N_i $$
 	* $MAF_i$: Minor allele frequency of the i-th input file
 	* $N_i$: Number of individuals in the N-th input file
 

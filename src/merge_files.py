@@ -78,16 +78,16 @@ def print_execution_time(satrt_time):
 # This function writes IMMerge arguments in to meta information of merged output
 # Lines start with "##"
 def write_args(fh_output):
-    fh_output.write(('##IMMmerge=<Date=' + time.strftime('%a, %d %b %Y %H:%M:%S', time.localtime()) + '>\n'))
+    comment_line = '##IMMerge_command=merge_files.py '
     for k, v in dict_flags.items():
         if k=='--input' or k=='--info':
-            fh_output.write(f'##IMMmerge=<{k[2:]}=')
+            comment_line += f'{k}'
             for fn in v:
-                fn = os.path.split(fn)[1]
-                fh_output.write(f'{fn} ')
-            fh_output.write('>\n')
+                comment_line += ' ' + fn
         else:
-            fh_output.write(f'##IMMmerge=<{k[2:]}={v}>\n')
+            comment_line += f' {k} {v}'
+    comment_line = comment_line + '; Date=' + time.strftime('%a %b %d %H:%M:%S %Y', time.localtime()) + '\n'
+    fh_output.write(comment_line)
 
 # Merge header lines of input files (.dose.vcf.gz) together and write into a BGZF file (bgzip file)
 # Parameters:
@@ -130,7 +130,8 @@ def merge_header_lines(lst_input_fh, fh_output):
 
     # Merge column headers
     if line[0] != '#': # Sanity check
-        print('should start with #')
+        print('Error: header line should start with #\nExit')
+        exit()
 
     # In current version of VCF format (4.2) these are fixed, mandatory columns, then followed by individual IDs:
     #   - CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT
@@ -179,28 +180,16 @@ def merge_individual_variant(snp, number_of_dup_id, inx_info_column, new_info_va
     # flag_first_na: An indicator to show whether a variant is missing from the first input file
     # If missing, need to fill info columns from other input file
     flag_first_na = False
-
-    # print('\n\n############# cp 0: look for SNP:', snp)
-
-
     for i in range(len(lst_input_fh)):
         if i == 0:  # If this is the first input file
-            # print('############# cp 1: This is the first file: fh name:', lst_input_fh[i])
-
-
             if lst_alt_frq_val[i] != dict_flags['--na_rep']:
                 # If this is the first input file and variant is not missing,
                 # then keep all columns including info columns
-
-                # print('############# cp 1.1: The first file and variant is not missing')
-
                 lst_tmp = search_SNP_and_read_lines(snp, lst_input_fh[i]).split(maxsplit=inx_info_column+1)
 
                 lst_tmp[inx_info_column] = new_info_val
                 merged_line = '\t'.join(lst_tmp)
             else:
-                # print('############# cp 1.2: The first file and variant is missing')
-
                 # If variant is missing from the file, then fill with '.|.' (missing genotype) and exclude the first few info columns
                 # Need to get values of info columns from other input files
                 # merged_line = '\t'.join([dict_flags['--na_rep']+'|'+dict_flags['--na_rep'] for j in range(lst_number_of_individuals[i])])
@@ -208,22 +197,13 @@ def merge_individual_variant(snp, number_of_dup_id, inx_info_column, new_info_va
                                          range(lst_number_of_individuals[i])])
                 flag_first_na = True  # Indicate flag: Fill info columns later with other input files
         else:  # If this is not the first file
-            # print(f'############# cp 2: This is the {i}-th file, fh: ', lst_input_fh[i])
             if lst_alt_frq_val[i] == dict_flags['--na_rep']:
-                # print('############# cp 2.1: This variant is missing', line[:100])
-                # print('############# cp 2.1: lst_alt_frq_val[i] is:', lst_alt_frq_val[i])
-                # print("############# cp 2.1: dict_flags['--na_rep'] is:", dict_flags['--na_rep'])
-
                 # If variant is missing from this input file, then fill 'NA' or user provided missing value symbol
                 merged_line = merged_line + '\t' + '\t'.join(
                     [dict_flags['--na_rep']+'|'+dict_flags['--na_rep'] for j in range(lst_number_of_individuals[i]-number_of_dup_id)])
             else:  # If not missing, split and remove info columns
                 line = search_SNP_and_read_lines(snp, lst_input_fh[i])
                 # Skip number_of_dup_id samples when merging
-
-                # print('############# cp 2', line[:100])
-                # print('############# cp 2: lst_alt_frq_val[i]:', lst_alt_frq_val[i])
-
                 merged_line = merged_line + '\t' + line.split(maxsplit=number_of_dup_id+inx_indiv_id_starts)[-1]
                 if flag_first_na:  # If info columns is still missing, add these columns back
                     lst_tmp = line.split(maxsplit=inx_indiv_id_starts)[:-1]
@@ -231,8 +211,6 @@ def merge_individual_variant(snp, number_of_dup_id, inx_info_column, new_info_va
                     info_cols = '\t'.join(lst_tmp)
                     merged_line = info_cols + '\t' + merged_line
                     flag_first_na = False
-
-                # print('############# cp 3: no error up to here')
     return merged_line
 
 # This function reads in variant_kept.txt file as a reference, and merge rest of lines in input files

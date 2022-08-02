@@ -25,7 +25,7 @@
 		* If a variant is missing for some individuals, the values will be ".|." (or other user supplied value with --na_rep as "na_rep|na_rep") in merged output file.
 		* If --missing is 0, only variants shared by all input files will be saved in merged result.
 	* ```--na_rep```: (Optional) Defines what symbol to use for missing values. Default is ".". This flag is ignored if --missing is 0.
-	* ```--r2_threshold: (Optional, default is 0, ie. no filtering) Only variants with combined imputation quality score r2_combined≥r2_threshold will be saved in the merged file
+	* ```--r2_threshold```: (Optional, default is 0, ie. no filtering) Only variants with combined imputation quality score r2_combined≥r2_threshold will be saved in the merged file
 	* ```--r2_output```: Default is "z_transformation". Defines how imputation quality score is calculated in the output file. Valid values are:
 		* z_transformation **(recommended)**: Fisher z-transformation
 		* weighted_average: calculated weighted average of r2. Weight is determined by number of individuals of each file.

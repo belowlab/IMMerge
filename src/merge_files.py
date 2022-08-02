@@ -1,7 +1,7 @@
 # Step 02
 # This code is used to merge imputed files from TopMed based on list of saved variants in prior steps
 # The goal is to combine post-imputation vcf.gz files into one vcf.gz file
-
+import pandas as pd
 from xopen import PipedCompressionWriter, xopen # Faster than gzip
 import os
 import process_args
@@ -89,13 +89,32 @@ def write_args(fh_output):
     comment_line = comment_line + '; Date=' + time.strftime('%a %b %d %H:%M:%S %Y', time.localtime()) + '\n'
     fh_output.write(comment_line)
 
+# Check if there are duplicated samples (True/False), then
+# rename duplicated samples as ID, ID:2, ID:3,...
+# Return merged column header to write into output file
+def rename_duplicated_samples(lst_column_header, inx_indiv_id_starts):
+    merged_header = lst_column_header[0] # merged column header to return
+    # dict_id_count is a dictionary to track number after colon to rename an ID
+    dict_id_count = {k:1 for k in lst_column_header[0].split(maxsplit=inx_indiv_id_starts)[-1].split()}
+    for i in range(1, len(lst_column_header)): # Check headers from non-first input files
+        lst_tmp = lst_column_header[i].split(maxsplit=dict_flags['--duplicate_id']+inx_indiv_id_starts)[-1].split()
+        for j in range(len(lst_tmp)):
+            if dict_id_count.get(lst_tmp[j]) is None: # If current ID is not seen before
+                dict_id_count[lst_tmp[j]] = 1
+            else:
+                dict_id_count[lst_tmp[j]] += 1
+                lst_tmp[j] = lst_tmp[j] + ':' + str(dict_id_count[lst_tmp[j]]) # Replace current ID with ID:index+1
+
+        merged_header += '\t' + '\t'.join(lst_tmp) # Reconstruct the
+    return merged_header
+
 # Merge header lines of input files (.dose.vcf.gz) together and write into a BGZF file (bgzip file)
 # Parameters:
 # - fh_output_raw: file handle of output file (need to use bgzip module for actual writing)
 # - lst_input_fh: list of file handles of input files
 def merge_header_lines(lst_input_fh, fh_output):
     # Read trough info lines (line start with ##) and write into output file
-    # Process all files at the same time. DO NOT assume All input files have the same number of info lines
+    # Process all files at the same time. DO NOT assume All input files have the same number of meta info lines
     lst_column_header = [] # Store lines for column headers of each input files
     if dict_flags['--meta_info'] == 'none': # Do not include any meta information
         for fh in lst_input_fh:
@@ -133,17 +152,21 @@ def merge_header_lines(lst_input_fh, fh_output):
         print('Error: header line should start with #\nExit')
         exit()
 
-    # In current version of VCF format (4.2) these are fixed, mandatory columns, then followed by individual IDs:
+    # In current version of VCF format (4.3) these are fixed, mandatory columns, then followed by individual IDs:
     #   - CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT
     inx_indiv_id_starts = line.split(maxsplit=10).index('FORMAT') + 1  # Find from which column genotype data starts
     inx_info_column = line.split(maxsplit=10).index('INFO') # Find index of column "INFO"
     print('\tIndividual genotype data starts from column #:', inx_indiv_id_starts + 1)
-    # Create merged header line, initialize with header from the first file
-    line_to_write = lst_column_header[0]
-    for col_header in lst_column_header[1:]:  # Process header line of remaining input files
-        # Set maxsplit in slit() function to remove duplicated IDs
-        line_to_write = line_to_write + '\t' + \
-                        col_header.split(maxsplit=dict_flags['--duplicate_id'] + inx_indiv_id_starts)[-1]
+
+    if dict_flags['--check_duplicate_id']: # Check if there are duplicated samples and rename
+        line_to_write = rename_duplicated_samples(lst_column_header, inx_indiv_id_starts)
+    else:
+        # Create merged header line, initialize with header from the first file
+        line_to_write = lst_column_header[0]
+        for col_header in lst_column_header[1:]:  # Process header line of remaining input files
+            # Set maxsplit in slit() function to remove duplicated IDs
+            line_to_write = line_to_write + '\t' + \
+                            col_header.split(maxsplit=dict_flags['--duplicate_id'] + inx_indiv_id_starts)[-1]
     fh_output.write((line_to_write + '\n'))
     return inx_indiv_id_starts, inx_info_column
 

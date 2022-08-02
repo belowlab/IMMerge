@@ -34,7 +34,7 @@ import os
 def process_args():
     parser = argparse.ArgumentParser()
     lst_args = ['--input', '--info', '--output', '--thread', '--missing', '--na_rep', '--r2_threshold', '--r2_output',
-                '--r2_cap', '--duplicate_id', '--write_with', '--meta_info', '--verbose']
+                '--r2_cap', '--duplicate_id', '--check_duplicate_id', '--write_with', '--meta_info', '--verbose']
     # Help messages of each option
     dict_help = {
         '--input': '(Required) Files to be merged, multiple files are allowed. Must in gzipped or bgziped VCF format',
@@ -47,6 +47,7 @@ def process_args():
         '--r2_output': '(Optional) Default is "z_transformation". Defines how imputation quality score is calculated in the output file.',
         '--r2_cap': '(Optional) Adjust R squared by --r2_cap if imputation quality Rsq=1. Only valid for z transformation to avoid infinity',
         '--duplicate_id': '(Optional) Default is 0. Defines number of duplicated individuals in each input file. Duplicated IDs should be the first N columns in each file',
+        '--check_duplicate_id':'(Optional) Default is False. Check if there are duplicated IDs, then rename non-first IDs to ID:2, ID:3, ..., ID:index_of_input_file+1',
         '--write_with': '(Optional) Default is bgzip. Write to bgziped file with bgzip. User can supply specific path to bgzip such as /user/bin/bgzip',
         '--meta_info': "(Optional) Valid values are {index of input file (1-based), 'none', 'all'}. What meta information (lines start with '##') to include in output file. Default is 1 (meta information from the first input file)",
         '--verbose': '(Optional) Default is False. Print more messages.'}
@@ -61,6 +62,7 @@ def process_args():
                     '--r2_threshold': [0, float],
                     '--r2_output': ['z_transformation', str, ['first', 'mean', 'weighted_average', 'z_transformation', 'min', 'max']],
                     '--r2_cap': [10e-4, float],
+                    '--check_duplicate_id':['0', str, ['false', '0', 'true', '1']],
                     '--duplicate_id': [0, int],
                     '--write_with':['bgzip', str],
                     '--meta_info':['1', str],
@@ -71,12 +73,18 @@ def process_args():
             parser.add_argument(arg, help=dict_help[arg], nargs='*', required=True)
         elif arg == '--info':
             parser.add_argument(arg, help=dict_help[arg], nargs='*', default='')
-        elif arg == '--r2_output' or arg == '--verbose':
+        elif arg == '--r2_output' or arg == '--verbose' or arg=='--check_duplicate_id':
             parser.add_argument(arg, help=dict_help[arg], default=dict_default[arg][0], type=dict_default[arg][1], choices=dict_default[arg][2])
         else:
             parser.add_argument(arg, help=dict_help[arg], default=dict_default[arg][0], type=dict_default[arg][1])
 
     args = parser.parse_args()
+
+    # Convert --check_duplicate_id to boolean
+    if args.check_duplicate_id.upper()=='FALSE' or args.check_duplicate_id=='0':
+        args.check_duplicate_id = False
+    else:
+        args.check_duplicate_id = True
 
     # Convert verbose to boolean
     if args.verbose.upper()=='FALSE' or args.verbose=='0':

@@ -33,30 +33,31 @@
 	* --duplicate_id: (optional, default is 0) Defines number of duplicated individuals in each input file. Duplicated IDs should be the first N columns in each file and not mixed with unique IDs.
 		* For example (in our case), the first 100 individuals in each input file are duplicated as a sanity check. Set --duplicated_id to 100 so that only one set of these IDs will be saved in output file.
 		* (ie. starting from the second input file, data of the first 100 individuals will be skipped in the merged output)
+	* --check_duplicate_id: 
 	* --help: (optional)  Exit program after printing out help info, ignore any other flags and values provided.
 
 ## Calculation of combined r2 and MAF
 1. r2
 	1. Mean: ignore missing values in calculation
 	2. Weighted average, ignore missing values in calculation
-		* <img src="https://render.githubusercontent.com/render/math?math=r^2_{combined} = \frac{\sum_{i=1}^{n}\ r_i^2 * N_i}{\sum_{i=1}^{n}N_i}">
-		* <img src="https://render.githubusercontent.com/render/math?math=r^2_i">: Imputation quality r squared (Rsq) of the i-th input file
-		* <img src="https://render.githubusercontent.com/render/math?math=N_i">: Number of individuals in the N-th input file
+		* $r^2_{combined} = \frac{\sum_{i=1}^{n}\ r_i^2 * N_i}{\sum_{i=1}^{n}N_i}$
+		* $r^2_i$: Imputation quality r squared (Rsq) of the i-th input file
+		* $N_i$: Number of individuals in the N-th input file
 		* Ignore missing values. For example a variant has below r2 in each input file:
 			* File #1: Rsq=0.3, number of individuals = 1000
 			* File #2: Missing, number of individuals = 2000 (← Ignore this file then)
 			* File #3: Rsq=0.2, number of individuals = 3000
 			* Weighted Rsq = (0.3*1000 + 0.2*3000)/(1000 + 3000) = 0.225
 	3. Fisher z-transformation:
-		* Adjust imputation quality score as <img src="https://render.githubusercontent.com/render/math?math=R^2 = R^2 - cap">
-		* <img src="https://render.githubusercontent.com/render/math?math=z = \frac{1}{2}*ln\frac{1+r}{1-r}">
+		* Adjust imputation quality score as $R^2 = R^2 - r2_cap$
+		* z-transformation: $z = \frac{1}{2}ln\frac{1+r}{1-r}$
 		* Take weighted average of z
-		* Convert z back to R using tanh function: <img src="https://render.githubusercontent.com/render/math?math=R = \frac{e^x - e^{-x}}{e^x + e^{-x}}">
-		* Square R to get combined inputation quality
+		* Convert z back to R using tanh function: $R = \frac{e^z - e^{-z}}{e^z + e^{-z}}$
+		* Square R to get combined imputation quality
 2. MAF: weighted average, ignore missing values: Use the same equation as weighted Rsq
-	* <img src="https://render.githubusercontent.com/render/math?math=MAF_{combined} = \frac{\sum_{i=1}^{n}MAF_i * N_i}{\sum_{i=1}^{n}N_i}">
-	* <img src="https://render.githubusercontent.com/render/math?math=MAF_i">: Minor allele frequency of the i-th input file
-	* <img src="https://render.githubusercontent.com/render/math?math=N_i">: Number of individuals in the N-th input file
+	* $MAF_{combined} = \frac{\sum_{i=1}^{n}MAF_i * N_i}{\sum_{i=1}^{n}N_i}$
+	* $MAF_i$: Minor allele frequency of the i-th input file
+	* $N_i$: Number of individuals in the N-th input file
 
 ## File format and special notes:
 1. All input files should be bgzipped, post-imputation VCF files from TOMed, with name as [file_name].vcf.gz

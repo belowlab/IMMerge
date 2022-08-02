@@ -87,6 +87,5 @@ python src/merge_files.py \
 	--input data_sample/sample_group1.dose.vcf.gz data_sample/sample_group2.dose.vcf.gz data_sample/sample_group3.dose.vcf.gz \
 	--output output_sample/merged_sample \
 	--check_duplicate_id true \
-	--missing 1 \
-	--duplicate_id 5
+	--missing 1
 ```

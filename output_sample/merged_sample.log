@@ -1,11 +1,11 @@
-Job starts at (local time) 2022-08-02 17:37:27
+Job starts at (local time) 2022-08-02 18:19:26
 
 Input options used:
-	--input: ['sample_group1.dose.vcf.gz', 'sample_group2.dose.vcf.gz', 'sample_group3.dose.vcf.gz']
-	--info: ['sample_group1.info.gz', 'sample_group2.info.gz', 'sample_group3.info.gz']
-	--output: ../output_sample/merged_sample
+	--input: ['data_sample/sample_group1.dose.vcf.gz', 'data_sample/sample_group2.dose.vcf.gz', 'data_sample/sample_group3.dose.vcf.gz']
+	--info: ['data_sample/sample_group1.info.gz', 'data_sample/sample_group2.info.gz', 'data_sample/sample_group3.info.gz']
+	--output: output_sample/merged_sample
 	--thread: 1
-	--missing: 0
+	--missing: 1
 	--na_rep: .
 	--r2_threshold: 0
 	--r2_output: z_transformation
@@ -23,8 +23,8 @@ Below .info.gz files were used:
 
 Number of variants:
 	Total number of all input files combined: 22
-	Number of saved variants:1
-	Number of excluded variants:21
+	Number of saved variants: 10
+	Number of excluded variants: 12
 
 Numbers of individuals in each input file: [10, 20, 15]
 

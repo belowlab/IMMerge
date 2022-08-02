@@ -62,11 +62,11 @@ def process_args():
                     '--r2_threshold': [0, float],
                     '--r2_output': ['z_transformation', str, ['first', 'mean', 'weighted_average', 'z_transformation', 'min', 'max']],
                     '--r2_cap': [10e-4, float],
-                    '--check_duplicate_id':['0', str, ['false', '0', 'true', '1']],
+                    '--check_duplicate_id':['0', str, ['false', '0', 'False', 'true', 'True', '1']],
                     '--duplicate_id': [0, int],
                     '--write_with':['bgzip', str],
                     '--meta_info':['1', str],
-                    '--verbose': ['0', str, ['false', '0', 'true', '1']]}
+                    '--verbose': ['0', str, ['false', '0', 'False', 'true', 'True', '1']]}
     # Add arguments
     for arg in lst_args:  # If user provide arguments not in the list, they will not be used (and no error message)
         if arg == '--input':

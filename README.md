@@ -1,13 +1,15 @@
 # IMMerge
 
 ## Required packages and versions
-1. This project is built with python 3.7.x and below packages: (python 3.9 and 3.10 are also verified to work)
-	* pandas 1.3.3
-	* bgzip 0.4.0
-	* xopen 1.4.0
+1. This project works with python 3.7 and above. Below packages are needed:
+	* python modules:
+	  * pandas 1.3.3
+	  * xopen 1.4.0
+	* Commandline tool:
+	  * bgzip (Can be downloaded from https://github.com/samtools/htslib)
 2. Packages that might need manual installation: pandas, bgzip
 	1. To install missing packages use: ```pip install package_name```
-	2. For example: ```pip install bgzip```
+	2. For example: ```pip install xopen```
 
 ## Arguments
 1. The program is designed to be used in command line with user input flags and values.
@@ -45,6 +47,12 @@
 			* File #2: Missing, number of individuals = 2000 (← Ignore this file then)
 			* File #3: Rsq=0.2, number of individuals = 3000
 			* Weighted Rsq = (0.3*1000 + 0.2*3000)/(1000 + 3000) = 0.225
+	3. Fisher z-transformation:
+		* Adjust imputation quality score as <img src="https://render.githubusercontent.com/render/math?math=R^2 = R^2 - cap">
+		* <img src="https://render.githubusercontent.com/render/math?math=z = \frac{1}{2}*ln\frac{1+r}{1-r}">
+		* Take weighted average of z
+		* Convert z back to R using tanh function: <img src="https://render.githubusercontent.com/render/math?math=R = \frac{e^x - e^{-x}}{e^x + e^{-x}}">
+		* Square R to get combined inputation quality
 2. MAF: weighted average, ignore missing values: Use the same equation as weighted Rsq
 	* <img src="https://render.githubusercontent.com/render/math?math=MAF_{combined} = \frac{\sum_{i=1}^{n}MAF_i * N_i}{\sum_{i=1}^{n}N_i}">
 	* <img src="https://render.githubusercontent.com/render/math?math=MAF_i">: Minor allele frequency of the i-th input file

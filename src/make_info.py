@@ -4,28 +4,38 @@
 import argparse
 import os
 from xopen import PipedCompressionWriter, xopen
-lst_arg = ['--input', '--output_dir', '--output_fn', '--verbose'] # Available arguments
+lst_arg = ['--input', '--output_dir', '--output_fn', '--col_names', '--thread', '--write_with', '--use_rsid', '--verbose'] # Available arguments
 parser = argparse.ArgumentParser(description='Generate info files')
 parser.add_argument('--input', nargs='*', type=str, required=True,
-                    help='(Required) Multiple input files are allowed. Must in gzipped or bgziped VCF format')
+                    help='(Required) Multiple input files are allowed. Must in gzipped or bgziped VCF format.')
 parser.add_argument('--output_dir', type=str, default='',
                     help='(Optional) Directory for output files. Default is current working directory.')
 parser.add_argument('--output_fn', type=str, nargs='*',
                     help='(Optional) Default is input file name with suffix replaced by ".info.gz".')
 parser.add_argument('--col_names', nargs='*', default=['AF', 'MAF', 'R2', 'IMPUTED/TYPED/TYPED_ONLY'],
-                    help="(Optional) Default is ['AF', 'MAF', 'R2', 'IMPUTED/TYPED/TYPED_ONLY']. Column names of alt frequency, MAF, imputation quality score, genotyped. Separated by space")
+                    help="(Optional) Default is ['AF', 'MAF', 'R2', 'IMPUTED/TYPED/TYPED_ONLY']. Column names of alt frequency, MAF, imputation quality score, genotyped. Separated by space.")
 parser.add_argument('--thread', default=1, type=int,
                     help='(Optional) Default is 1. Defines how many thread to use in multiprocessing. If number of threads <0, will use 1 instead of user supplied value.')
-parser.add_argument('--write_with', default='bgzip',
+parser.add_argument('--write_with', default='bgzip', type=str,
                     help='(Optional) User specified program to write compressed file. Default is bgzip. (gzip can be used unless required to bgzip info files)')
-parser.add_argument('--verbose', default=False,
-                    help='(Optional) Print help message if True. Default is False. Valid values are (not case-sensitive): {0|1|True|False}')
+parser.add_argument('--use_rsid', default='False', choices=['false', '0', 'False', 'true', 'True', '1'], type=str,
+                    help='(Optional) Default is False. If input VCFs use rsID instead of chr:pos:ref:alt, set this option to True to avoid duplicate IDs (rsID may not be unique). Also need to use the same setting in merging step.')
+parser.add_argument('--verbose', default='False', choices=['false', '0', 'False', 'true', 'True', '1'], type=str,
+                    help='(Optional) Print help message if True. Default is False. Valid values are (not case-sensitive): {0|1|True|False}.')
 args = parser.parse_args()
-if (not args.verbose) or args.verbose.upper()=='FALSE' or args.verbose=='0':
+
+# Turn --verbose to boolean
+if args.verbose.upper()=='FALSE' or args.verbose=='0':
     args.verbose = False
 else:
     args.verbose = True
     parser.print_help()  # Print help message if desired
+
+# Turn --use_rsid to boolean
+if args.use_rsid.upper()=='FALSE' or args.use_rsid=='0':
+    args.use_rsid = False
+else:
+    args.use_rsid = True
 
 if args.output_fn is None: # Fill output file names as input name + '.info.gz'
     args.output_fn = [os.path.split(fn)[1].split('.')[0] + '.info.gz' for fn in args.input]
@@ -40,7 +50,7 @@ print('\n')
 if args.verbose:
     print('#### Sanity check: checking user inputs')
 
-invalid_flag = False # Track if any input value is invalid
+invalid_flag = False # Track if any input file is invalid
 # Check if input files exist
 for fn in args.input:
     if not os.path.isfile(fn):
@@ -78,10 +88,10 @@ for i in range(len(args.input)):
     if args.verbose:
         print(f'\n#### Processing files: Start. input file = {args.input[i]}; output file = {os.path.join(args.output_dir, args.output_fn[i])}')
 
-    output_fh = PipedCompressionWriter(path=os.path.join(args.output_dir + args.output_fn[i]), threads_flag="-@", program_args=[args.write_with],
+    output_fh = PipedCompressionWriter(path=os.path.join(args.output_dir, args.output_fn[i]), threads_flag="-@", program_args=[args.write_with],
                            threads=args.thread)
     # Need these columns: 'SNP', 'REF(0)', 'ALT(1)', 'Genotyped','ALT_Frq', 'MAF', 'Rsq'
-    output_fh.write('SNP\tREF(0)\tALT(1)\tALT_Frq\tMAF\tRsq\tGenotyped\n')
+    output_fh.write('SNP\trsID\tREF(0)\tALT(1)\tALT_Frq\tMAF\tRsq\tGenotyped\n')
     if args.verbose:
         print(f'#### Processing files: Write column headers to output file {args.output_fn[i]}')
 
@@ -89,8 +99,14 @@ for i in range(len(args.input)):
         line = input_fh.readline().strip()
         while line[:2] == '##': # Read through header lines start with ##
             line = input_fh.readline().strip()
-        column_names = line.split()
-        # Find index of desired columns
+        column_names = line.split(maxsplit=10) # The header line has 8 fixed columns, so do not need to split the entire line
+        if args.use_rsid: # If ID in input VCF is rsID, need to extract chr, pos, ref and alt instead of ID column
+            # Find index of #CHROM, POS, REF and ALT
+            idx_chr = column_names.index('#CHROM')
+            idx_pos = column_names.index('POS')
+            idx_rsid = column_names.index('ID') # In this case ID column contains rsID
+
+        # Find index of other desired columns
         idx_snp = column_names.index('ID')
         idx_ref = column_names.index('REF')
         idx_alt = column_names.index('ALT')
@@ -125,7 +141,12 @@ for i in range(len(args.input)):
         count = 0
         while line != '':
             tmp_lst = line.split()
-            snp = tmp_lst[idx_snp]
+            if args.use_rsid:
+                snp = f'{tmp_lst[idx_chr]}:{tmp_lst[idx_pos]}:{tmp_lst[idx_ref]}:{tmp_lst[idx_alt]}'
+                rsid = tmp_lst[idx_rsid]
+            else:
+                snp = tmp_lst[idx_snp]
+                rsid = '-' # Assume rsID is missing
             ref = tmp_lst[idx_ref]
             alt = tmp_lst[idx_alt]
             info_val = tmp_lst[idx_info].split(';')
@@ -133,7 +154,7 @@ for i in range(len(args.input)):
             maf = info_val[idx_maf].split('=')[1]
             rsq = info_val[idx_rsq].split('=')[1]
             genotyped = info_val[idx_genotyped]
-            output_fh.write(f'{snp}\t{ref}\t{alt}\t{alt_frq}\t{maf}\t{rsq}\t{genotyped}\n')
+            output_fh.write(f'{snp}\t{rsid}\t{ref}\t{alt}\t{alt_frq}\t{maf}\t{rsq}\t{genotyped}\n')
             count += 1
             if args.verbose:
                 if count%1000 == 0:

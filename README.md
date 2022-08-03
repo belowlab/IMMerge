@@ -56,8 +56,8 @@
 		* Adjust imputation quality score as $r^2 = r^2 - r^2_{cap}$
 		* z-transformation: $z = \frac{1}{2}ln\frac{1+r}{1-r}$
 		* Take weighted average of z
-		* Convert z back to R using tanh function: $R = \frac{e^z - e^{-z}}{e^z + e^{-z}}$
-		* Square R to get combined imputation quality
+		* Convert z back to r using tanh function: $r= \frac{e^z - e^{-z}}{e^z + e^{-z}}$
+		* Square r to get combined imputation quality
 2. MAF: weighted average, ignore missing values: Use the same equation as weighted Rsq
 	* $$MAF_{combined} = \left( \sum_{i=1}^{n}MAF_i * N_i \right) / \sum_{i=1}^{n}N_i $$
 	* $MAF_i$: Minor allele frequency of the i-th input file

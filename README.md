@@ -53,7 +53,7 @@
 			* File #3: Rsq=0.2, number of individuals = 3000
 			* Weighted Rsq = (0.3*1000 + 0.2*3000)/(1000 + 3000) = 0.225
 	3. Fisher z-transformation:
-		* Adjust imputation quality score as $R^2 = R^2 - r2_cap$
+		* Adjust imputation quality score as $r^2 = r^2 - r^2_{cap}$
 		* z-transformation: $z = \frac{1}{2}ln\frac{1+r}{1-r}$
 		* Take weighted average of z
 		* Convert z back to R using tanh function: $R = \frac{e^z - e^{-z}}{e^z + e^{-z}}$

@@ -174,11 +174,16 @@ def merge_header_lines(lst_input_fh, fh_output):
 # This function read line of a given file handle, until find line of given SNP (by parameter snp))
 # Return string of that line (if not found then return an empty string '')
 def search_SNP_and_read_lines(snp, fh):
-    inx_snp_ID = 2  # Index of column that contains variant ID such as chr21:10000777:C:A (value is 2 in 2021/07 version)
+    inx_snp_ID = 2  # Index of column that contains variant ID such as chr21:10000777:C:A (index is hard coded as this column is fixed in VCF format)
     line = fh.readline().strip()  # Read in each line to search for the given variant
     # input_snp = line.split(maxsplit=inx_snp_ID + 1)[-2]
     while line != '':  # Keep read line until find given snp
-        input_snp = line.split(maxsplit=inx_snp_ID + 1)[-2]
+        if dict_flags['--use_rsid']: # If ID column contains rsID instead of chr:pos:ref:alt, need to construct the right format for comparisons
+            tmp_lst = line.split(maxsplit=10) # First 8 columns are fixed, so it is safe to set maxsplit to 10
+            # Indices of #CHROM, POS, REF and ALT are 0, 1, 3 and 4
+            input_snp = f'{tmp_lst[0]}:{tmp_lst[1]}:{tmp_lst[3]}:{tmp_lst[4]}'
+        else:
+            input_snp = line.split(maxsplit=inx_snp_ID + 1)[inx_snp_ID]
         if input_snp == snp: # if found
             break
         else:
@@ -253,6 +258,7 @@ def merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, 
     indx_ALT_Frq_combined = line.index('ALT_Frq_combined')
     indx_MAF_combined = line.index('MAF_combined')
     indx_Rsq_combined = line.index('Rsq_combined')
+    indx_genotyped = line.index('Genotyped')
 
     while True:
         line_snp_kept = fh_snp_kept.readline().strip()
@@ -266,9 +272,10 @@ def merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, 
             ALT_Frq_combined = lst_snp_kept[indx_ALT_Frq_combined]
             MAF_combined = lst_snp_kept[indx_MAF_combined]
             Rsq_combined = lst_snp_kept[indx_Rsq_combined]
-            genotyped = lst_snp_kept[3] # "Genotyped" is always the 4th column, so can be hard coded
+            genotyped = lst_snp_kept[indx_genotyped]
             # Create new INFO value to replace INFO column in merged line
-            new_info_val = 'AF='+ALT_Frq_combined+';MAF='+MAF_combined+';R2='+Rsq_combined+';'+genotyped
+            # new_info_val = 'AF='+ALT_Frq_combined+';MAF='+MAF_combined+';R2='+Rsq_combined+';'+genotyped
+            new_info_val = f'AF={ALT_Frq_combined};MAF={MAF_combined};R2={Rsq_combined};{genotyped}'
 
             inx_alt_frq_col = 4  # Index of ALT_frq column group1 (since variant_kept file is build by the program, the index can be hard coded)
             # Add ALT_frq of group2,...,groupX to each list

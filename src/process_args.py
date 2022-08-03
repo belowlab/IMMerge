@@ -34,7 +34,7 @@ import os
 def process_args():
     parser = argparse.ArgumentParser()
     lst_args = ['--input', '--info', '--output', '--thread', '--missing', '--na_rep', '--r2_threshold', '--r2_output',
-                '--r2_cap', '--duplicate_id', '--check_duplicate_id', '--write_with', '--meta_info', '--verbose']
+                '--r2_cap', '--duplicate_id', '--check_duplicate_id', '--write_with', '--meta_info', '--use_rsid', '--verbose']
     # Help messages of each option
     dict_help = {
         '--input': '(Required) Files to be merged, multiple files are allowed. Must in gzipped or bgziped VCF format',
@@ -50,6 +50,7 @@ def process_args():
         '--check_duplicate_id':'(Optional) Default is False. Check if there are duplicate IDs, then rename non-first IDs to ID:2, ID:3, ..., ID:index_of_input_file+1',
         '--write_with': '(Optional) Default is bgzip. Write to bgziped file with bgzip. User can supply specific path to bgzip such as /user/bin/bgzip',
         '--meta_info': "(Optional) Valid values are {index of input file (1-based), 'none', 'all'}. What meta information (lines start with '##') to include in output file. Default is 1 (meta information from the first input file)",
+        '--use_rsid':'(Optional) Default is False. If input VCFs use rsID instead of chr:pos:ref:alt, set this option to True to avoid duplicate IDs (rsID may not be unique). Use make_info.py to make info files, or follow the required format.',
         '--verbose': '(Optional) Default is False. Print more messages.'}
 
     # Default values and data types of optional flags
@@ -66,6 +67,7 @@ def process_args():
                     '--duplicate_id': [0, int],
                     '--write_with':['bgzip', str],
                     '--meta_info':['1', str],
+                    '--use_rsid':['0', str, ['false', '0', 'False', 'true', 'True', '1']],
                     '--verbose': ['0', str, ['false', '0', 'False', 'true', 'True', '1']]}
     # Add arguments
     for arg in lst_args:  # If user provide arguments not in the list, they will not be used (and no error message)
@@ -73,7 +75,7 @@ def process_args():
             parser.add_argument(arg, help=dict_help[arg], nargs='*', required=True)
         elif arg == '--info':
             parser.add_argument(arg, help=dict_help[arg], nargs='*', default='')
-        elif arg == '--r2_output' or arg == '--verbose' or arg=='--check_duplicate_id':
+        elif arg == '--r2_output' or arg == '--verbose' or arg=='--check_duplicate_id' or arg=='--use_rsid':
             parser.add_argument(arg, help=dict_help[arg], default=dict_default[arg][0], type=dict_default[arg][1], choices=dict_default[arg][2])
         else:
             parser.add_argument(arg, help=dict_help[arg], default=dict_default[arg][0], type=dict_default[arg][1])
@@ -85,6 +87,12 @@ def process_args():
         args.check_duplicate_id = False
     else:
         args.check_duplicate_id = True
+
+    # Convert use_rsid to boolean
+    if args.use_rsid.upper() == 'FALSE' or args.use_rsid == '0':
+        args.use_rsid = False
+    else:
+        args.use_rsid = True
 
     # Convert verbose to boolean
     if args.verbose.upper()=='FALSE' or args.verbose=='0':
@@ -137,7 +145,7 @@ def process_args():
 
     # Check --output
     path, fn = os.path.split(dict_flags['--output'])
-    if not os.path.isdir(path): # Create output directory if does not exist
+    if path != '' and (not os.path.isdir(path)): # Create output directory if does not exist
         os.mkdir(path)
 
     # Check --thread

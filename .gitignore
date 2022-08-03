@@ -1,3 +1,5 @@
+output_sample/
+data_sample/
 tmp_out/
 src/.idea/
 demo_make_info.sh

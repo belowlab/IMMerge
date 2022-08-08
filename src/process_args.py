@@ -38,14 +38,14 @@ def process_args():
     # Help messages of each option
     dict_help = {
         '--input': '(Required) Files to be merged, multiple files are allowed. Must in gzipped or bgziped VCF format',
-        '--info': '(Optional) Directory/name to info files. Default path is the same directory as corresponding input file, default info file share the same name as input file, except for suffix (.info.gz)',
+        '--info': '(Optional) Directory/name to info files. Default path is the same directory as corresponding input file, default info files share the same name as input file, except for suffix (.info.gz)',
         '--output': '(Optional) Default is "merged.vcf.gz" and saved at current working directory. Output file name without suffix',
         '--thread': '(Optional) Default value is 1. Defines how many thread to use in multiprocessing. If number of threads <0, will use 1 instead of user supplied value.',
         '--missing': '(Optional) Default is 0. Defines number of missing values allowed for each variant',
         '--na_rep': '(Optional) Default is "." (ie. ".|." for genotype values). Defines what symbol to use for missing values. This flag is ignored if --missing is 0',
         '--r2_threshold': '(Optional) Default is 0, ie. no filtering. Only variants with combined imputation quality score r2≥r2_threshold will be saved in the merged file',
         '--r2_output': '(Optional) Default is "z_transformation". Defines how imputation quality score is calculated in the output file.',
-        '--r2_cap': '(Optional) Adjust R squared by --r2_cap if imputation quality Rsq=1. Only valid for z transformation to avoid infinity',
+        '--r2_cap': '(Optional) Default is 0.001. Adjust R squared by --r2_cap if imputation quality Rsq=1. Only valid for z transformation to avoid infinity',
         '--duplicate_id': '(Optional) Default is 0. Defines number of duplicate individuals in each input file. Duplicated IDs should be the first N columns in each file',
         '--check_duplicate_id':'(Optional) Default is False. Check if there are duplicate IDs, then rename non-first IDs to ID:2, ID:3, ..., ID:index_of_input_file+1',
         '--write_with': '(Optional) Default is bgzip. Write to bgziped file with bgzip. User can supply specific path to bgzip such as /user/bin/bgzip',

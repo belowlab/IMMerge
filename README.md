@@ -31,7 +31,7 @@
 		* weighted_average: calculated weighted average of r2. Weight is determined by number of individuals of each file.
 		* mean, min, max: Mean, min or max of r2, ignore missing values.
 		* first: output imputation quality score r2 from the first file. In order to use this setting and avoid missing r2, "--missing" must be 0.
-	* ```--r2_cap```: (Optional) Adjust imputation quality score r2 by --r2_cap if imputation quality score=1. Only valid for z transformation to avoid infinity
+	* ```--r2_cap```: (Optional) Default is 0.001. Adjust imputation quality score r2 by --r2_cap if imputation quality score=1. Only valid for z transformation to avoid infinity
 	* ```--duplicate_id```: (Optional, default is 0) Defines number of duplicate individuals in each input file (usually as a sanity check of imputation in subsiles). Duplicate IDs should be the first N columns in each file and not mixed with unique IDs.
 		* For example, the first 100 individuals in each input file are duplicated on purpose. Set --duplicated_id to 100 so that only the first set of these IDs will be saved in output file.
 		* (ie. starting from the second input file, data of the first 100 individuals will be skipped in the merged output)

@@ -8,12 +8,14 @@ import process_args
 import get_SNP_list
 import check_r2_setting_for_imputation
 import time
-# import multiprocessing
-# import bgzip # vcf.gz file is actually bgzip file not gzip file, but can be opened with gzip
+VERSION = '0.0.1' # Version of IMMerge
+LOG_TXT = '' # Global variable to track info printed. Write to log file when run is finished
 
-print('\nVersion 1.0')
+print(f'\nIMMerge version {VERSION}')
 start_time = time.time()    # Track execution time
 print('Job starts at (local time) ', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_time)))
+LOG_TXT += f'IMMerge Version {VERSION}\n'
+LOG_TXT += 'Job starts at (local time) '+time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_time))+'\n'
 
 # File name can be passed to this code in terminal, or use import this code as in a script (need to modify a little)
 # args = sys.argv
@@ -24,26 +26,14 @@ print('Job starts at (local time) ', time.strftime("%Y-%m-%d %H:%M:%S", time.loc
 # dict_flags = process_args_ongoing.process_args(args) # Process terminal input
 dict_flags = process_args.process_args() # Process terminal input, can use it as a global variable
 
-# Write some info into a log file
+# Save some info to write into a log file
 log_fn = dict_flags['--output'] + '.log' # Save Important processing info into a .log file for user reference
-with open(log_fn, 'w') as log_fh:
-    # Write start time
-    log_fh.write('Job starts at (local time) ' + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_time)) + '\n\n')
-    log_fh.write('Input options used:\n')
-    for k,v in dict_flags.items():
-        log_fh.write('\t'+ k+': ' + str(v) + '\n')
 
-    # write info.gz file names
-    log_fh.write('\nBelow .info.gz files were used:\n')
-    for fn in dict_flags['--input']:
-        info_fn = fn.split('/')[-1].split('.')[0] + '.info.gz'
-        log_fh.write('\t' + info_fn + '\n')
+for k, v in dict_flags.items():
+    LOG_TXT += '\t' + k + ': ' + str(v) + '\n'
 
-    # Write number of variants and individuals to be processed
-    log_fh.write('\nNumber of variants:\n') # Actual numbers are written in get_SNP_list.py
-    # log_fh.write('\tTotal number of all input files combined:')
-    # log_fh.write('\tNumber of saved variants:')
-    # log_fh.write('\tNumber of excluded variants:')
+LOG_TXT += '\nNumber of variants:\n'
+
 
 check_r2_setting_for_imputation.check_imputatilson_parameters(lst_fn=dict_flags['--input'])
 lst_number_of_individuals, number_snps_kept = get_SNP_list.get_snp_list(dict_flags)
@@ -69,11 +59,10 @@ def print_execution_time(satrt_time):
     print('\nDuration: {:.2f} hours, {:.2f} minutes, {:.2f} seconds'.format(hours, minutes, seconds))
     print('End of run')
 
-    # Write into log file
-    log_fn = dict_flags['--output'] + '.log'
-    with open(log_fn, 'a') as log_fh:
-        log_fh.write('\n\nDuration: {:.2f} hours, {:.2f} minutes, {:.2f} seconds'.format(hours, minutes, seconds))
-        log_fh.write('\n\nEnd of run')
+    global LOG_TXT
+    LOG_TXT += f'\n\nDuration: {hours:.2f} hours, {minutes:.2f} minutes, {seconds:.2f} seconds'
+    LOG_TXT += '\n\nEnd of run'
+
 
 # This function writes IMMerge arguments in to meta information of merged output
 # Lines start with "##"
@@ -89,10 +78,17 @@ def write_args(fh_output):
     comment_line = comment_line + '; Date=' + time.strftime('%a %b %d %H:%M:%S %Y', time.localtime()) + '\n'
     fh_output.write(comment_line)
 
-# Check if there are duplicated samples (True/False), then
-# rename duplicated samples as ID, ID:2, ID:3,...
+# Check if there are duplicated samples, then rename duplicate samples as ID, ID:2, ID:3,...
+# Output duplicate IDs to file dup_IDs.txt
 # Return merged column header to write into output file
 def rename_duplicated_samples(lst_column_header, inx_indiv_id_starts):
+    path, _ = os.path.split(dict_flags['--output']) # Get output directory
+    dup_id_fn = 'dup_IDs.txt' # Write duplicate ID s to dup_IDs.txt in output directory
+    dup_id_fh = open(os.path.join(path, dup_id_fn), 'w')
+    print('\tChecking sample ID duplication: Duplicate sample IDs are saved in', os.path.join(path, dup_id_fn))
+    global LOG_TXT
+    LOG_TXT += '\tChecking sample ID duplication: Duplicate sample IDs are saved in '+os.path.join(path, dup_id_fn) + '\n'
+
     merged_header = lst_column_header[0] # merged column header to return
     # dict_id_count is a dictionary to track number after colon to rename an ID
     dict_id_count = {k:1 for k in lst_column_header[0].split(maxsplit=inx_indiv_id_starts)[-1].split()}
@@ -103,9 +99,11 @@ def rename_duplicated_samples(lst_column_header, inx_indiv_id_starts):
                 dict_id_count[lst_tmp[j]] = 1
             else:
                 dict_id_count[lst_tmp[j]] += 1
+                dup_id_fh.write(lst_tmp[j] + ':' + str(dict_id_count[lst_tmp[j]])+'\n')
                 lst_tmp[j] = lst_tmp[j] + ':' + str(dict_id_count[lst_tmp[j]]) # Replace current ID with ID:index+1
 
-        merged_header += '\t' + '\t'.join(lst_tmp) # Reconstruct the
+        merged_header += '\t' + '\t'.join(lst_tmp) # Reconstruct the header line
+    dup_id_fh.close()
     return merged_header
 
 # Merge header lines of input files (.dose.vcf.gz) together and write into a BGZF file (bgzip file)
@@ -113,6 +111,7 @@ def rename_duplicated_samples(lst_column_header, inx_indiv_id_starts):
 # - fh_output_raw: file handle of output file (need to use bgzip module for actual writing)
 # - lst_input_fh: list of file handles of input files
 def merge_header_lines(lst_input_fh, fh_output):
+    global LOG_TXT
     # Read trough info lines (line start with ##) and write into output file
     # Process all files at the same time. DO NOT assume All input files have the same number of meta info lines
     lst_column_header = [] # Store lines for column headers of each input files
@@ -150,6 +149,7 @@ def merge_header_lines(lst_input_fh, fh_output):
     # Merge column headers
     if line[0] != '#': # Sanity check
         print('Error: header line should start with #\nExit')
+        LOG_TXT += 'Error: header line should start with #\nExit\n'
         exit()
 
     # In current version of VCF format (4.3) these are fixed, mandatory columns, then followed by individual IDs:
@@ -157,6 +157,7 @@ def merge_header_lines(lst_input_fh, fh_output):
     inx_indiv_id_starts = line.split(maxsplit=10).index('FORMAT') + 1  # Find from which column genotype data starts
     inx_info_column = line.split(maxsplit=10).index('INFO') # Find index of column "INFO"
     print('\tIndividual genotype data starts from column #:', inx_indiv_id_starts + 1)
+    LOG_TXT += f'\tIndividual genotype data starts from column #: {inx_indiv_id_starts + 1}\n'
 
     if dict_flags['--check_duplicate_id']: # Check if there are duplicated samples and rename
         line_to_write = rename_duplicated_samples(lst_column_header, inx_indiv_id_starts)
@@ -245,6 +246,7 @@ def merge_individual_variant(snp, number_of_dup_id, inx_info_column, new_info_va
 # (Header lines should be handled by merge_header_lines() function, so they are ignored in this function)
 # Merged lines are written into output file
 def merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, fh_output):
+    global LOG_TXT
     # Load variants_kept.txt as a reference of merged file
     # Then compare snp ids in each input file with the SNPs in variants_kept.txt
     # And replace ALT_frq, MAF and r2 values in INFO column with new values calculated from all input files
@@ -252,6 +254,7 @@ def merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, 
     count = 0  # For console output
     fh_snp_kept = open(dict_flags['--output']+'_variants_retained.info.txt')
     print('\t'+dict_flags['--output']+'_variants_retained.info.txt file loaded\n')
+    LOG_TXT += '\t'+dict_flags['--output']+'_variants_retained.info.txt file loaded\n\n'
 
     # Read the first line (header), find index of combined ALT_freq, MAF, Rsq
     line = fh_snp_kept.readline().strip().split()
@@ -309,7 +312,9 @@ def merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, 
 
 # A function to run each step all together
 def run_merge_files():
+    global LOG_TXT
     print('\nStart merging files:')
+    LOG_TXT += '\nStart merging files:\n'
     # 1. Connect file handles of input and output files for writing
     # Store file handles of input files in a list for iteration
     lst_input_fn = dict_flags['--input']
@@ -326,6 +331,7 @@ def run_merge_files():
     # - inx_snp_id_column: index of ID columns in input .dose.vcf.gz file
     inx_indiv_id_starts, inx_info_column = merge_header_lines(lst_input_fh, fh_output)
     print('\tMerged header lines (lines start with #)')
+    LOG_TXT += '\tMerged header lines (lines start with #)\n'
 
     # 3. Merge rest lines (from row 19 in this version (2021/07,v1))
     # Merge files, close file handles when done
@@ -335,6 +341,10 @@ def run_merge_files():
 
     # Print out execution time
     print_execution_time(start_time)
+
+    # Write info to log file
+    log_fh = open(dict_flags['--output'] + '.log', 'w')
+    log_fh.write(LOG_TXT+'\n')
 
 # ################################ Profile memory usage ################################
 '''from memory_profiler import profile

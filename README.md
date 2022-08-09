@@ -1,5 +1,9 @@
 # IMMerge
 
+## Cite IMMerge
+Zhu W., Chen H-H, Petty A.S., Petty L.E., Polikowsky H.G., Gamazon E.R., Below J.E., Highland H.M. (2022). *IMMerge: Merging imputation data at scale*. manuscript submitted for publication
+
+
 ## Required packages and versions
 1. This project works with python 3.7 and above. Below packages are needed:
 	* python modules:

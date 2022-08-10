@@ -2,11 +2,12 @@ from setuptools import setup, find_packages
 
 setup(
     name='IMMerge',
-    version='0.0.1',
+    version='0.0.2',
     license='MIT',
     author="Wanying Zhu from Below lab",
     author_email='email@example.com',
-    packages=find_packages('src'),
+    long_description='Merge large Variant Call Format (VCF) files',
+    packages=find_packages(where='src'),
     package_dir={'': 'src'},
     url='https://github.com/belowlab/IMMerge',
     keywords='Genetics imputation VCF_merger',

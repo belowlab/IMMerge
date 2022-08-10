@@ -31,7 +31,12 @@
 import argparse
 import os
 
-def process_args():
+def process_args(arg_list = ''):
+    '''
+    Params: arg_list: a list arguments passed to merge_files.py when use IMMerge as a module
+    Return: a dictionary containing all arguments to be used
+    '''
+
     parser = argparse.ArgumentParser()
     lst_args = ['--input', '--info', '--output', '--thread', '--missing', '--na_rep', '--r2_threshold', '--r2_output',
                 '--r2_cap', '--duplicate_id', '--check_duplicate_id', '--write_with', '--meta_info', '--use_rsid', '--verbose']
@@ -80,7 +85,10 @@ def process_args():
         else:
             parser.add_argument(arg, help=dict_help[arg], default=dict_default[arg][0], type=dict_default[arg][1])
 
-    args = parser.parse_args()
+    if arg_list == '': # If IMMerged is used in command line
+        args = parser.parse_args()
+    else: # If IMMerged is called as a module in python script
+        args = parser.parse_args(arg_list)
 
     # Convert --check_duplicate_id to boolean
     if args.check_duplicate_id.upper()=='FALSE' or args.check_duplicate_id=='0':
@@ -196,4 +204,3 @@ def process_args():
 
     # If no error raised up to here, return flags
     return dict_flags
-

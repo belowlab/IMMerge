@@ -8,48 +8,19 @@ import process_args
 import get_SNP_list
 import check_r2_setting_for_imputation
 import time
-VERSION = '0.0.1' # Version of IMMerge
-LOG_TXT = '' # Global variable to track info printed. Write to log file when run is finished
-
-print(f'\nIMMerge version {VERSION}')
-start_time = time.time()    # Track execution time
-print('Job starts at (local time) ', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_time)))
-LOG_TXT += f'IMMerge Version {VERSION}\n'
-LOG_TXT += 'Job starts at (local time) '+time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_time))+'\n'
-
-# File name can be passed to this code in terminal, or use import this code as in a script (need to modify a little)
-# args = sys.argv
-
-# Process terminal input
-# dict_flags contains values for below flags:
-#   --input, --output, --thread, --missing, --r2_threshold, --r2_output
-# dict_flags = process_args_ongoing.process_args(args) # Process terminal input
-dict_flags = process_args.process_args() # Process terminal input, can use it as a global variable
-
-# Save some info to write into a log file
-log_fn = dict_flags['--output'] + '.log' # Save Important processing info into a .log file for user reference
-
-for k, v in dict_flags.items():
-    LOG_TXT += '\t' + k + ': ' + str(v) + '\n'
-
-LOG_TXT += '\nNumber of variants:\n'
-
-
-check_r2_setting_for_imputation.check_imputatilson_parameters(lst_fn=dict_flags['--input'])
-lst_number_of_individuals, number_snps_kept = get_SNP_list.get_snp_list(dict_flags)
 
 # ################################ Helper functions ################################
 # Print progress par in console
 # - progress: current progress (number of SNPs processed)
-# - total: total number of SNPs need to be precessed
-def progress_bar(progres, total=number_snps_kept):
+def progress_bar(progres):
+    total = number_snps_kept # total number of SNPs need to be precessed
     percent = 100 * (progres/total)
     bar = '=' * int(percent) + '-' * int(100 - percent)
     print(f'|{bar}| {percent:.2f}%', end='\r')
 
 
 # This function prints execution time at the end of run
-def print_execution_time(satrt_time):
+def print_execution_time(start_time):
     # merge_files()
     duration = time.time() - start_time
     hours = duration // 3600
@@ -310,9 +281,55 @@ def merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, 
 
 # ################################ End of helper functions ################################
 
+
 # A function to run each step all together
-def run_merge_files():
+# Params:
+# - args: a dictionary contains arguments when IMMerged is used as a python module
+def run_merge_files(args=''):
+    start_time = time.time()  # Track execution time
+
+    global VERSION  # Global variable Version of IMMerge
+    VERSION = '0.0.2'
     global LOG_TXT
+    LOG_TXT = ''  # Global variable to track info printed. Write to log file when run is finished
+
+    print(f'\nIMMerge version {VERSION}')
+    print('Job starts at (local time) ', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_time)))
+    LOG_TXT += f'IMMerge Version {VERSION}\n'
+    LOG_TXT += 'Job starts at (local time) ' + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_time)) + '\n'
+
+    # Process terminal input or arguments passed through python module call
+    # dict_flags contains values for IMMerge flags:
+    global dict_flags
+    # Sanity check: check if args is empty when used as python module
+    if __name__ != '__main__':
+        if args == '': # Missing arguments
+            print('Error: args argument in run_merge_files() is empty. Must pass arguments in a dictionary when IMMerge is called as python module \nExit')
+            print_execution_time(start_time)
+            exit()
+        else: # Parse arguments, convert to a list and pass to process_args()
+            args_list = []
+            for k, v in args.items():
+                args_list.append(k)
+                if isinstance(v, list): # add all values if it is a list
+                    for val in v: args_list.append(val)
+                else: args_list.append(v)
+            dict_flags = process_args.process_args(args_list)
+    else: # If called from terminal
+        dict_flags = process_args.process_args(args)  # Process terminal input, use it as a global variable
+
+    for k, v in dict_flags.items():
+        LOG_TXT += '\t' + k + ': ' + str(v) + '\n'
+
+    # Do not need this one below
+    # check_r2_setting_for_imputation.check_imputation_parameters(lst_fn=dict_flags['--input'])
+
+    global lst_number_of_individuals
+    global number_snps_kept
+    lst_number_of_individuals, number_snps_kept = get_SNP_list.get_snp_list(dict_flags)
+    LOG_TXT += f'\nNumber of variants retained: {number_snps_kept}\n'
+    LOG_TXT += f'Numbers of individuals in each input file: {lst_number_of_individuals}\n'
+
     print('\nStart merging files:')
     LOG_TXT += '\nStart merging files:\n'
     # 1. Connect file handles of input and output files for writing
@@ -342,11 +359,10 @@ def run_merge_files():
     # Print out execution time
     print_execution_time(start_time)
 
-    # Write info to log file
+    # Write important processing info into a .log file for user reference
     log_fh = open(dict_flags['--output'] + '.log', 'w')
     log_fh.write(LOG_TXT+'\n')
 
-if __name__ == '__main__':
+if __name__ == '__main__': # Called as commandline tool
     run_merge_files()
-else:
-    pass
+# else: # If run as a module in python script, must pass a list of arguments to run_merge_files()

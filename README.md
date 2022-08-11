@@ -1,4 +1,4 @@
-# IMMerge
+# IMMerge: Merging imputation data at scale
 
 ## Cite IMMerge
 Zhu W., Chen H-H, Petty A.S., Petty L.E., Polikowsky H.G., Gamazon E.R., Below J.E., Highland H.M. (2022). *IMMerge: Merging imputation data at scale*. manuscript submitted for publication
@@ -15,9 +15,9 @@ Zhu W., Chen H-H, Petty A.S., Petty L.E., Polikowsky H.G., Gamazon E.R., Below J
 	1. To install missing packages use: ```pip install package_name```
 	2. For example: ```pip install xopen```
 
-## Arguments
-1. The program is designed to be used in command line with user input flags and values.
-2. Valid flags are:
+## Command line arguments
+1. User input flags and values are used in the command line version of IMMerge
+2. For merging multiple vcf files, valid flags are:
 	* ```--input```: (Required) files to be merged, multiple files are allowed
 	* ```--info```:  (Optional) Directory/name to info files. Default path is the same directory as corresponding input file, default info file share the same name as input file, except for suffix (.info.gz)
 	* ```--output```: (Optional) Default is merged.vcf.gz and saved at current working directory. Output file name without suffix.
@@ -43,6 +43,31 @@ Zhu W., Chen H-H, Petty A.S., Petty L.E., Polikowsky H.G., Gamazon E.R., Below J
 	* ```--write_with```: (Optional) Default is bgzip. Write to bgziped file with bgzip. User can supply specific path to bgzip such as ```/user/bin/bgzip```.
 	* ```--meta_info```: (Optional) Valid values are {index of input file (1-based), 'none', 'all'}. Indicates what meta information (lines start with '##') to include in output file. Default is 1 (meta information from the first input file).
 	* ```--help```: (Optional) Exit program after printing out help info, ignore any other flags and values provided.
+3. For generating info files
+	* Valid flags:
+		* ```--input```: (Required) Multiple input files are allowed. Must in gzipped or bgziped VCF format. 
+		* ```--output_dir```: (Optional) Directory for output files. Default is current working directory.
+        * ```--output_fn```: (Optional) Default is input file name with suffix replaced by ".info.gz".
+        * ```--col_names```: (Optional) Default is ['AF', 'MAF', 'R2', 'IMPUTED/TYPED/TYPED_ONLY'].
+                    Column names of alt frequency, MAF, imputation quality score, genotyped. Separated by space.
+        * ```--thread```: (Optional) Default is 1. Defines how many thread to use in multiprocessing.
+                If number of threads <0, will use 1 instead of user supplied value.')
+        * ```--write_with```: (Optional) Default is bgzip, but gzip is also valid. User specified program to write compressed file.
+        * ```--use_rsid```: (Optional) Default is False.
+                    If input VCFs use rsID instead of chr:pos:ref:alt, set this option to True to avoid duplicate IDs (rsID may not be unique).
+                    Also need to use the same setting in merging step.
+        * ```--verbose```: (Optional) Print help message if True. Default is False. Valid values are (not case-sensitive): {0|1|True|False}
+    * Information files of corresponding VCFs are required in order to merge efficiently. These are files with **.info.gz** suffix if your files are directly downloaded from TOPmed imputation server.
+Otherwise, users should manually create info files follow the format of TOPmed imputation server. Examples can be found in ```data_sample/``` in this repo.
+   * Example info file:  
+	 
+		| SNP                | REF(0) | ALT(1) | ALT_Frq | MAF | Rsq | Genotyped |
+		| ------------------ | ------ | ------ | ------- | --- | --- | --------- |
+		| chr21:10000777:C:A | C | A | 0.00003 | 0.00003 | 0.44840 | IMPUTED |
+		| chr21:10000931:T:G | T | G | 0.00004 | 0.00004 | 0.46070 | IMPUTED |
+		| chr21:10001844:A:G | A | G | 0.00002 | 0.00002 | 0.65686 | IMPUTED |
+		| chr21:10001985:C:T | C | T | 0.00001 | 0.00001 | 0.18849 | IMPUTED |
+	* SNP, REF(0), ALT(1), ALT_Frq, MAF, Rsq and Genotyped are required and fixed columns. Columns with other names are ignored.
 
 ## Calculation of combined r2 and MAF
 1. r2
@@ -76,20 +101,41 @@ Zhu W., Chen H-H, Petty A.S., Petty L.E., Polikowsky H.G., Gamazon E.R., Below J
 6. Output files will be overwritten if another run saves output in the same directory with the same file name.
 7. Value smaller than 0.000001 (6 digits of precision) will be rounded to 0 when outputting ALT_frq, MAF and R2 into variant_kept.txt and variant_excluded.txt. These values will also be used to replace INFO column in merged .vcf.gz file. Precision can be changed with float_format parameter in get_SNP_list.py.
 
-## Example code
+## Command line examples
 1. Example making info.gz file from input vcf.gz files. Outputs are saved in the same directory as input VCFs.
 ```bash
 cd IMMerge
-python src/merge_files.py \
-	--input data_sample/sample_group1.dose.vcf.gz data_sample/sample_group2.dose.vcf.gz data_sample/sample_group3.dose.vcf.gz \
+python src/IMMerge/make_info.py \
+	--input data_sample/sample_group1.dose.vcf.gz data_sample/sample_group2.dose.vcf.gz data_sample/sample_group3.dose.vcf.gz
 ```
 
-2. Example using sample data in ```./data_sample/```, output files are saved in ```./output_sample/```.
+2. Example merging sample data in ```./data_sample/```, output files are saved in ```./output_sample/```.
 ```bash
 cd IMMerge
-python src/merge_files.py \
+python src/IMMerge/merge_files.py \
 	--input data_sample/sample_group1.dose.vcf.gz data_sample/sample_group2.dose.vcf.gz data_sample/sample_group3.dose.vcf.gz \
 	--output output_sample/merged_sample \
 	--check_duplicate_id true \
 	--missing 1
 ```
+
+## Run IMMerge as a python module
+Install IMMerge with ```pip install IMMerge```.
+Arguments should be passed to IMMerge functions in a dictionary and follow the same rules as in command line calls.
+The command line examples above can be executed with below python code:
+1. Python code to make info.gz file from input vcf.gz files. Outputs are saved in the same directory as input VCFs.
+```bash
+import IMMerge
+args = {'--input': ['data_sample/sample_group1.dose.vcf.gz', 'data_sample/sample_group2.dose.vcf.gz', 'data_sample/sample_group3.dose.vcf.gz']}
+IMMerge.write_info(args)
+```
+
+2. Python code to merge sample data in ```./data_sample/```, output files are saved in ```./output_sample/```.
+```bash
+import IMMerge
+args = {'--input': ['data_sample/sample_group1.dose.vcf.gz', 'data_sample/sample_group2.dose.vcf.gz','data_sample/sample_group3.dose.vcf.gz'],
+		'--output': 'output_sample/merged_sample', '--check_duplicate_id': True, '--missing': 1}
+IMMerge.run_merge_files(args)
+```
+
+

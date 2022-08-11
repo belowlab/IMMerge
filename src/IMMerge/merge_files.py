@@ -1,56 +1,34 @@
 # Step 02
 # This code is used to merge imputed files from TopMed based on list of saved variants in prior steps
 # The goal is to combine post-imputation vcf.gz files into one vcf.gz file
-import pandas as pd
+
 from xopen import PipedCompressionWriter, xopen # Faster than gzip
 import os
-import process_args
-import get_SNP_list
-import check_r2_setting_for_imputation
+# import process_args
+# from .process_args import process_args
+# from .get_SNP_list import get_snp_list
+# from .check_r2_setting_for_imputation import check_imputatilson_parameters
 import time
-VERSION = '0.0.1' # Version of IMMerge
-LOG_TXT = '' # Global variable to track info printed. Write to log file when run is finished
 
-print(f'\nIMMerge version {VERSION}')
-start_time = time.time()    # Track execution time
-print('Job starts at (local time) ', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_time)))
-LOG_TXT += f'IMMerge Version {VERSION}\n'
-LOG_TXT += 'Job starts at (local time) '+time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_time))+'\n'
-
-# File name can be passed to this code in terminal, or use import this code as in a script (need to modify a little)
-# args = sys.argv
-
-# Process terminal input
-# dict_flags contains values for below flags:
-#   --input, --output, --thread, --missing, --r2_threshold, --r2_output
-# dict_flags = process_args_ongoing.process_args(args) # Process terminal input
-dict_flags = process_args.process_args() # Process terminal input, can use it as a global variable
-
-# Save some info to write into a log file
-log_fn = dict_flags['--output'] + '.log' # Save Important processing info into a .log file for user reference
-
-for k, v in dict_flags.items():
-    LOG_TXT += '\t' + k + ': ' + str(v) + '\n'
-
-LOG_TXT += '\nNumber of variants:\n'
-
-
-check_r2_setting_for_imputation.check_imputatilson_parameters(lst_fn=dict_flags['--input'])
-lst_number_of_individuals, number_snps_kept = get_SNP_list.get_snp_list(dict_flags)
+if __name__ == "__main__":
+    from process_args import process_args
+    from get_SNP_list import get_snp_list
+else: # import this way when used as a module. '.' indicates to import from the current module (directory)
+    from .process_args import process_args
+    from .get_SNP_list import get_snp_list
 
 # ################################ Helper functions ################################
 # Print progress par in console
 # - progress: current progress (number of SNPs processed)
-# - total: total number of SNPs need to be precessed
-def progress_bar(progres, total=number_snps_kept):
+def progress_bar(progres):
+    total = number_snps_kept # total number of SNPs needs to be processed
     percent = 100 * (progres/total)
     bar = '=' * int(percent) + '-' * int(100 - percent)
     print(f'|{bar}| {percent:.2f}%', end='\r')
 
 
 # This function prints execution time at the end of run
-def print_execution_time(satrt_time):
-    # merge_files()
+def print_execution_time(start_time):
     duration = time.time() - start_time
     hours = duration // 3600
     duration = duration % 3600
@@ -147,7 +125,7 @@ def merge_header_lines(lst_input_fh, fh_output):
     write_args(fh_output)
 
     # Merge column headers
-    if line[0] != '#': # Sanity check
+    if line[0] != '#': # Sanity check, can also use: assert line[0] == '#', 'header line should start with #'
         print('Error: header line should start with #\nExit')
         LOG_TXT += 'Error: header line should start with #\nExit\n'
         exit()
@@ -310,9 +288,74 @@ def merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, 
 
 # ################################ End of helper functions ################################
 
-# A function to run each step all together
-def run_merge_files():
+
+
+def run_merge_files(args):
+    '''
+    A function to run merging steps
+    Params:
+    - args: a dictionary containing arguments when IMMerged is used as a python module, formatted as {'--input':['file1', 'file2'], '--missing':1}. Valid flags are:
+        --input: (Required) Files to be merged, multiple files are allowed. Must in gzipped or bgziped VCF format.
+        --info: (Optional) Directory/name to info files.
+                Default path is the same directory as corresponding input file, default info files share the same name as input file, except for suffix (.info.gz).
+        --output: (Optional) Default is "merged.vcf.gz" and saved at current working directory. Output file name without suffix.
+        --thread: (Optional) Default value is 1. Defines how many thread to use in multiprocessing. If number of threads <0, will use 1 instead of user supplied value.
+        --missing: (Optional) Default is 0. Defines number of missing values allowed for each variant.
+        --na_rep: (Optional) Default is "." (ie. ".|." for genotype values). Defines what symbol to use for missing values. This flag is ignored if --missing is 0.
+        --r2_threshold: (Optional) Default is 0, ie. no filtering. Only variants with combined imputation quality score r2≥r2_threshold will be saved in the merged file.
+        --r2_output: (Optional) Default is "z_transformation". Defines how imputation quality score is calculated in the output file.
+        --r2_cap: (Optional) Default is 0.001. Adjust R squared by --r2_cap if imputation quality Rsq=1. Only valid for z transformation to avoid infinity.
+        --duplicate_id: (Optional) Default is 0. Defines number of duplicate individuals in each input file. Duplicated IDs should be the first N columns in each file.
+        --check_duplicate_id: (Optional) Default is False. Check if there are duplicate IDs, then rename non-first IDs to ID:2, ID:3, ..., ID:index_of_input_file+1.
+        --write_with: (Optional) Default is bgzip. Write to bgziped file with bgzip. User can supply specific path to bgzip such as /user/bin/bgzip.
+        --meta_info: (Optional) Valid values are {index of input file (1-based), 'none', 'all'}.
+                    What meta information (lines start with '##') to include in output file. Default is 1 (meta information from the first input file).
+        --use_rsid: (Optional) Default is False. If input VCFs use rsID instead of chr:pos:ref:alt, set this option to True to avoid duplicate IDs (rsID may not be unique).
+                    Use make_info.py to make info files, or follow the required format.
+        --verbose: (Optional) Default is False. Print more messages.
+    Return:
+    - Save a merged and bgziped vcf file as specified in --output
+    '''
+    start_time = time.time()  # Track execution time
+
+    global VERSION  # Global variable Version of IMMerge
+    VERSION = '0.0.3'
     global LOG_TXT
+    LOG_TXT = ''  # Global variable to track info printed. Write to log file when run is finished
+
+    print(f'\nIMMerge version {VERSION}')
+    print('Job starts at (local time) ', time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_time)))
+    LOG_TXT += f'IMMerge Version {VERSION}\n'
+    LOG_TXT += 'Job starts at (local time) ' + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_time)) + '\n'
+
+    # Process terminal input or arguments passed through python module call
+    # dict_flags contains values for IMMerge flags:
+    global dict_flags
+
+    if args != '': # If used as a module
+        # Parse arguments, convert to a list and pass to process_args()
+        args_list = []
+        for k, v in args.items():
+            args_list.append(k)
+            if isinstance(v, list): # add all values if it is a list
+                for val in v: args_list.append(val)
+            else: args_list.append(str(v)) # Args from command line are strings, so need to convert for process_args() to works
+        dict_flags = process_args(args_list)
+    else: # If called from terminal, so args==''
+        dict_flags = process_args(args)  # Process terminal input, use it as a global variable
+
+    for k, v in dict_flags.items():
+        LOG_TXT += '\t' + k + ': ' + str(v) + '\n'
+
+    # Do not need this one below
+    # check_r2_setting_for_imputation.check_imputation_parameters(lst_fn=dict_flags['--input'])
+
+    global lst_number_of_individuals
+    global number_snps_kept
+    lst_number_of_individuals, number_snps_kept = get_snp_list(dict_flags)
+    LOG_TXT += f'\nNumber of variants retained: {number_snps_kept}\n'
+    LOG_TXT += f'Numbers of individuals in each input file: {lst_number_of_individuals}\n'
+
     print('\nStart merging files:')
     LOG_TXT += '\nStart merging files:\n'
     # 1. Connect file handles of input and output files for writing
@@ -342,9 +385,10 @@ def run_merge_files():
     # Print out execution time
     print_execution_time(start_time)
 
-    # Write info to log file
+    # Write important processing info into a .log file for user reference
     log_fh = open(dict_flags['--output'] + '.log', 'w')
     log_fh.write(LOG_TXT+'\n')
 
-if __name__ == '__main__':
-    run_merge_files()
+if __name__ == '__main__': # Called as commandline tool
+    run_merge_files('')
+# If run as a module in python script, must pass a dictionary arguments to run_merge_files()

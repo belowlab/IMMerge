@@ -4,9 +4,10 @@
 import pandas as pd
 from xopen import PipedCompressionWriter, xopen # Faster than gzip
 import os
-import process_args
-import get_SNP_list
-import check_r2_setting_for_imputation
+# import process_args
+from .process_args import process_args
+from .get_SNP_list import get_snp_list
+# from .check_r2_setting_for_imputation import check_imputatilson_parameters
 import time
 
 # ################################ Helper functions ################################
@@ -313,10 +314,10 @@ def run_merge_files(args=''):
                 args_list.append(k)
                 if isinstance(v, list): # add all values if it is a list
                     for val in v: args_list.append(val)
-                else: args_list.append(v)
-            dict_flags = process_args.process_args(args_list)
+                else: args_list.append(str(v)) # Args from command line are strings, so need to convert for process_args() to works
+            dict_flags = process_args(args_list)
     else: # If called from terminal
-        dict_flags = process_args.process_args(args)  # Process terminal input, use it as a global variable
+        dict_flags = process_args(args)  # Process terminal input, use it as a global variable
 
     for k, v in dict_flags.items():
         LOG_TXT += '\t' + k + ': ' + str(v) + '\n'
@@ -326,7 +327,7 @@ def run_merge_files(args=''):
 
     global lst_number_of_individuals
     global number_snps_kept
-    lst_number_of_individuals, number_snps_kept = get_SNP_list.get_snp_list(dict_flags)
+    lst_number_of_individuals, number_snps_kept = get_snp_list(dict_flags)
     LOG_TXT += f'\nNumber of variants retained: {number_snps_kept}\n'
     LOG_TXT += f'Numbers of individuals in each input file: {lst_number_of_individuals}\n'
 

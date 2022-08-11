@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='IMMerge',
-    version='0.0.2',
+    version='0.0.3',
     license='MIT',
     author="Wanying Zhu from Below lab",
     author_email='email@example.com',

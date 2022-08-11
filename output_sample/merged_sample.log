@@ -1,5 +1,5 @@
 IMMerge Version 0.0.1
-Job starts at (local time) 2022-08-08 17:05:40
+Job starts at (local time) 2022-08-10 19:40:43
 	--input: ['../data_sample/sample_group1.dose.vcf.gz', '../data_sample/sample_group2.dose.vcf.gz', '../data_sample/sample_group3.dose.vcf.gz']
 	--info: ['../data_sample/sample_group1.info.gz', '../data_sample/sample_group2.info.gz', '../data_sample/sample_group3.info.gz']
 	--output: ../output_sample/merged_sample
@@ -9,8 +9,8 @@ Job starts at (local time) 2022-08-08 17:05:40
 	--r2_threshold: 0
 	--r2_output: z_transformation
 	--r2_cap: 0.001
-	--duplicate_id: 0
-	--check_duplicate_id: True
+	--duplicate_id: 5
+	--check_duplicate_id: False
 	--write_with: bgzip
 	--meta_info: 1
 	--use_rsid: False
@@ -20,12 +20,11 @@ Number of variants:
 
 Start merging files:
 	Individual genotype data starts from column #: 10
-	Checking sample ID duplication: Duplicate sample IDs are saved in ../output_sample/dup_IDs.txt
 	Merged header lines (lines start with #)
 	../output_sample/merged_sample_variants_retained.info.txt file loaded
 
 
 
-Duration: 0.00 hours, 0.00 minutes, 0.25 seconds
+Duration: 0.00 hours, 0.00 minutes, 0.24 seconds
 
 End of run

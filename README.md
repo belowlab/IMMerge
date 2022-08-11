@@ -119,7 +119,7 @@ python src/IMMerge/merge_files.py \
 	--missing 1
 ```
 
-## Run IMMerge as a python module
+## Run IMMerge as a python module (available on [PyPI](https://pypi.org/project/IMMerge/))
 Install IMMerge with ```pip install IMMerge```.
 Arguments should be passed to IMMerge functions in a dictionary and follow the same rules as in command line calls.
 The command line examples above can be executed with below python code:

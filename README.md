@@ -69,14 +69,14 @@ Otherwise, users should manually create info files follow the format of TOPmed i
 		| chr21:10001985:C:T | C | T | 0.00001 | 0.00001 | 0.18849 | IMPUTED |
 	* SNP, REF(0), ALT(1), ALT_Frq, MAF, Rsq and Genotyped are required and fixed columns. Columns with other names are ignored.
 
-## Calculation of combined r2 and MAF
-1. r2
+## Calculation of combined imputation quality, AF and MAF
+1. Imputation quality (R2)
 	1. Mean: ignore missing values in calculation
 	2. Weighted average, ignore missing values in calculation
-		* $$r^2_{combined} = \left( \sum_{i=1}^{n}\ r_i^2 * N_i \right) / \sum_{i=1}^{n}N_i$$
-		* $r^2_i$: Imputation quality r squared (Rsq) of the i-th input file
+		* $$R^2_{combined} = \left( \sum_{i=1}^{n}\ R_i^2 * N_i \right) / \sum_{i=1}^{n}N_i$$
+		* $R^2_i$: Imputation quality r squared (Rsq) of the i-th input file
 		* $N_i$: Number of individuals in the N-th input file
-		* Ignore missing values. For example a variant has below r2 in each input file:
+		* Ignore missing values. For example a variant has below R2 in each input file:
 			* File #1: Rsq=0.3, number of individuals = 1000
 			* File #2: Missing, number of individuals = 2000 (← Ignore this file then)
 			* File #3: Rsq=0.2, number of individuals = 3000
@@ -87,10 +87,11 @@ Otherwise, users should manually create info files follow the format of TOPmed i
 		* Take weighted average of z
 		* Convert z back to r using tanh function: $r= \frac{e^z - e^{-z}}{e^z + e^{-z}}$
 		* Square r to get combined imputation quality
-2. MAF: weighted average, ignore missing values: Use the same equation as weighted Rsq
+2. Minor allele frequency (MAF): weighted average, ignore missing values: Use the same equation as weighted Rsq
 	* $$MAF_{combined} = \left( \sum_{i=1}^{n}MAF_i * N_i \right) / \sum_{i=1}^{n}N_i $$
 	* $MAF_i$: Minor allele frequency of the i-th input file
 	* $N_i$: Number of individuals in the N-th input file
+3. Alt allele frequency (AF): the same as MAF
 
 ## File format and special notes:
 1. All input files should be compressed (gzip or bgzip). File format should follow post-imputation VCF file from TOMed.

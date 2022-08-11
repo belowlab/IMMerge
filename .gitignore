@@ -1,3 +1,5 @@
+setup.py
+setup.cfg
 exe_time_output.txt
 output_sample/
 data_sample/

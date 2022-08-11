@@ -17,7 +17,7 @@ Zhu W., Chen H-H, Petty A.S., Petty L.E., Polikowsky H.G., Gamazon E.R., Below J
 
 ## Command line arguments
 1. User input flags and values are used in the command line version of IMMerge
-2. For merging multiple vcf files, valid flags are:
+2. For merging multiple vcf files (```merge_files.py```), valid flags are:
 	* ```--input```: (Required) files to be merged, multiple files are allowed
 	* ```--info```:  (Optional) Directory/name to info files. Default path is the same directory as corresponding input file, default info file share the same name as input file, except for suffix (.info.gz)
 	* ```--output```: (Optional) Default is merged.vcf.gz and saved at current working directory. Output file name without suffix.
@@ -43,7 +43,7 @@ Zhu W., Chen H-H, Petty A.S., Petty L.E., Polikowsky H.G., Gamazon E.R., Below J
 	* ```--write_with```: (Optional) Default is bgzip. Write to bgziped file with bgzip. User can supply specific path to bgzip such as ```/user/bin/bgzip```.
 	* ```--meta_info```: (Optional) Valid values are {index of input file (1-based), 'none', 'all'}. Indicates what meta information (lines start with '##') to include in output file. Default is 1 (meta information from the first input file).
 	* ```--help```: (Optional) Exit program after printing out help info, ignore any other flags and values provided.
-3. For generating info files
+3. For generating info files (```make_info.py```)  
 	* Valid flags:
 		* ```--input```: (Required) Multiple input files are allowed. Must in gzipped or bgziped VCF format. 
 		* ```--output_dir```: (Optional) Directory for output files. Default is current working directory.

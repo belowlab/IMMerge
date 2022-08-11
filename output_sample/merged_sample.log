@@ -1,0 +1,31 @@
+IMMerge Version 0.0.3
+Job starts at (local time) 2022-08-11 14:20:09
+	--input: ['/Users/wanying/Documents/Below_lab/IMMerge_ongoing/IMMerge/data_sample/sample_group1.dose.vcf.gz', '/Users/wanying/Documents/Below_lab/IMMerge_ongoing/IMMerge/data_sample/sample_group2.dose.vcf.gz', '/Users/wanying/Documents/Below_lab/IMMerge_ongoing/IMMerge/data_sample/sample_group3.dose.vcf.gz']
+	--info: ['/Users/wanying/Documents/Below_lab/IMMerge_ongoing/IMMerge/data_sample/sample_group1.info.gz', '/Users/wanying/Documents/Below_lab/IMMerge_ongoing/IMMerge/data_sample/sample_group2.info.gz', '/Users/wanying/Documents/Below_lab/IMMerge_ongoing/IMMerge/data_sample/sample_group3.info.gz']
+	--output: /Users/wanying/Documents/Below_lab/IMMerge_ongoing/IMMerge/output_sample/merged_sample
+	--thread: 1
+	--missing: 1
+	--na_rep: .
+	--r2_threshold: 0
+	--r2_output: z_transformation
+	--r2_cap: 0.001
+	--duplicate_id: 5
+	--check_duplicate_id: False
+	--write_with: bgzip
+	--meta_info: 1
+	--use_rsid: False
+	--verbose: False
+
+Number of variants retained: 10
+Numbers of individuals in each input file: [10, 20, 15]
+
+Start merging files:
+	Individual genotype data starts from column #: 10
+	Merged header lines (lines start with #)
+	/Users/wanying/Documents/Below_lab/IMMerge_ongoing/IMMerge/output_sample/merged_sample_variants_retained.info.txt file loaded
+
+
+
+Duration: 0.00 hours, 0.00 minutes, 0.28 seconds
+
+End of run

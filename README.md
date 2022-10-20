@@ -35,7 +35,7 @@ Zhu W., Chen H-H, Petty A.S., Petty L.E., Polikowsky H.G., Gamazon E.R., Below J
 		* weighted_average: calculated weighted average of r2. Weight is determined by number of individuals of each file.
 		* mean, min, max: Mean, min or max of r2, ignore missing values.
 		* first: output imputation quality score r2 from the first file. In order to use this setting and avoid missing r2, "--missing" must be 0.
-	* ```--r2_cap```: (Optional) Default is 0.001. Adjust imputation quality score r2 by --r2_cap if imputation quality score=1. Only valid for z transformation to avoid infinity
+	* ```--r2_offset```: (Optional) Default is 0.001. Adjust imputation quality score r2 by --r2_offset if imputation quality score=1. Only valid for z transformation to avoid infinity
 	* ```--duplicate_id```: (Optional, default is 0) Defines number of duplicate individuals in each input file (usually as a sanity check of imputation in subsiles). Duplicate IDs should be the first N columns in each file and not mixed with unique IDs.
 		* For example, the first 100 individuals in each input file are duplicated on purpose. Set --duplicated_id to 100 so that only the first set of these IDs will be saved in output file.
 		* (ie. starting from the second input file, data of the first 100 individuals will be skipped in the merged output)
@@ -71,8 +71,15 @@ Otherwise, users should manually create info files follow the format of TOPmed i
 
 ## Calculation of combined imputation quality, AF and MAF
 1. Imputation quality (R2)
-	1. Mean: ignore missing values in calculation
-	2. Weighted average, ignore missing values in calculation
+   	
+	1. Fisher z-transformation ([reference](https://doi.org/10.1037/0021-9010.72.1.146)):
+		* Adjust imputation quality score as $r^2 = r^2 - r^2_{offset}$
+		* z-transformation: $z = \frac{1}{2}ln\frac{1+r}{1-r}$
+		* Take weighted average of z
+		* Convert z back to r using tanh function: $r= \frac{e^z - e^{-z}}{e^z + e^{-z}}$
+		* Square r to get combined imputation quality
+	2. Mean: ignore missing values in calculation
+	3. Weighted average, ignore missing values in calculation
 		* $$R^2_{combined} = \left( \sum_{i=1}^{n}\ R_i^2 * N_i \right) / \sum_{i=1}^{n}N_i$$
 		* $R^2_i$: Imputation quality r squared (Rsq) of the i-th input file
 		* $N_i$: Number of individuals in the N-th input file
@@ -81,12 +88,7 @@ Otherwise, users should manually create info files follow the format of TOPmed i
 			* File #2: Missing, number of individuals = 2000 (← Ignore this file then)
 			* File #3: Rsq=0.2, number of individuals = 3000
 			* Weighted Rsq = (0.3*1000 + 0.2*3000)/(1000 + 3000) = 0.225
-	3. Fisher z-transformation:
-		* Adjust imputation quality score as $r^2 = r^2 - r^2_{cap}$
-		* z-transformation: $z = \frac{1}{2}ln\frac{1+r}{1-r}$
-		* Take weighted average of z
-		* Convert z back to r using tanh function: $r= \frac{e^z - e^{-z}}{e^z + e^{-z}}$
-		* Square r to get combined imputation quality
+	
 2. Minor allele frequency (MAF): weighted average, ignore missing values: Use the same equation as weighted Rsq
 	* $$MAF_{combined} = \left( \sum_{i=1}^{n}MAF_i * N_i \right) / \sum_{i=1}^{n}N_i $$
 	* $MAF_i$: Minor allele frequency of the i-th input file

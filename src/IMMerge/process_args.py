@@ -39,7 +39,7 @@ def process_args(arg_list = ''):
 
     parser = argparse.ArgumentParser()
     lst_args = ['--input', '--info', '--output', '--thread', '--missing', '--na_rep', '--r2_threshold', '--r2_output',
-                '--r2_cap', '--duplicate_id', '--check_duplicate_id', '--write_with', '--meta_info', '--use_rsid', '--verbose']
+                '--r2_offset', '--duplicate_id', '--check_duplicate_id', '--write_with', '--meta_info', '--use_rsid', '--verbose']
     # Help messages of each option
     dict_help = {
         '--input': '(Required) Files to be merged, multiple files are allowed. Must in gzipped or bgziped VCF format',
@@ -50,7 +50,7 @@ def process_args(arg_list = ''):
         '--na_rep': '(Optional) Default is "." (ie. ".|." for genotype values). Defines what symbol to use for missing values. This flag is ignored if --missing is 0',
         '--r2_threshold': '(Optional) Default is 0, ie. no filtering. Only variants with combined imputation quality score r2≥r2_threshold will be saved in the merged file',
         '--r2_output': '(Optional) Default is "z_transformation". Defines how imputation quality score is calculated in the output file.',
-        '--r2_cap': '(Optional) Default is 0.001. Adjust R squared by --r2_cap if imputation quality Rsq=1. Only valid for z transformation to avoid infinity',
+        '--r2_offset': '(Optional) Default is 0.001. Adjust R squared by --r2_offset if imputation quality Rsq=1. Only valid for z transformation to avoid infinity',
         '--duplicate_id': '(Optional) Default is 0. Defines number of duplicate individuals in each input file. Duplicated IDs should be the first N columns in each file',
         '--check_duplicate_id':'(Optional) Default is False. Check if there are duplicate IDs, then rename non-first IDs to ID:2, ID:3, ..., ID:index_of_input_file+1',
         '--write_with': '(Optional) Default is bgzip. Write to bgziped file with bgzip. User can supply specific path to bgzip such as /user/bin/bgzip',
@@ -67,7 +67,7 @@ def process_args(arg_list = ''):
                     '--na_rep': ['.', str],
                     '--r2_threshold': [0, float],
                     '--r2_output': ['z_transformation', str, ['first', 'mean', 'weighted_average', 'z_transformation', 'min', 'max']],
-                    '--r2_cap': [10e-4, float],
+                    '--r2_offset': [10e-4, float],
                     '--check_duplicate_id':['0', str, ['false', '0', 'False', 'true', 'True', '1']],
                     '--duplicate_id': [0, int],
                     '--write_with':['bgzip', str],
@@ -124,7 +124,7 @@ def process_args(arg_list = ''):
     for k, v in dict_flags.items():
         if k == '--na_rep' and dict_flags['--missing'] == 0:
             print('\t' + k, v, '(ignored since --missing is 0)')
-        elif k == '--r2_cap' and dict_flags['--r2_output'] != 'z_transformation':
+        elif k == '--r2_offset' and dict_flags['--r2_output'] != 'z_transformation':
             print('\t' + k, v, '(ignored since --r2_output is not z_transformation)')
         elif k == '--output':
             print('\t' + k, v+'.vcf.gz')
@@ -177,10 +177,10 @@ def process_args(arg_list = ''):
     #     print('\t- Value of --r2_output should be: first, weighted_average, z_transformation, mean, min or max\nExit')
     #     exit()
 
-    # Check --r2_cap
-    if dict_flags['--r2_cap'] <0 or dict_flags['--r2_cap']>=1:
-        print('Error: Invalid value of --r2_cap:', dict_flags['--r2_cap'])
-        print('\t- Value of --r2_cap should be numeric between 0 and 1\nExit')
+    # Check --r2_offset
+    if dict_flags['--r2_offset'] <0 or dict_flags['--r2_offset']>=1:
+        print('Error: Invalid value of --r2_offset:', dict_flags['--r2_offset'])
+        print('\t- Value of --r2_offset should be numeric between 0 and 1\nExit')
         exit()
 
     # Check --duplicate_id

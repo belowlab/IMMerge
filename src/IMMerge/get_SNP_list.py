@@ -154,16 +154,16 @@ def __calculate_r2_maf_altFrq(df_merged, col_name_r2_combined,
         lst_col_names_r2_z_trans_weight_adj = []
         for i in range(len(dict_flags['--input'])):
             col_name_r2 = 'Rsq_group'+str(i+1)
-            # adjust with --r2_cap when Rsq=1 (Rsq-1). This column will be saved in output
-            df_merged['Rsq_group'+str(i+1)+'_cap_adj']=df_merged['Rsq_group'+str(i+1)]
-            mask_rsq = (df_merged['Rsq_group'+str(i+1)+'_cap_adj']==1)
-            # Substract --r2_cap when R2=1
-            df_merged.loc[mask_rsq, 'Rsq_group' + str(i + 1) + '_cap_adj'] -= dict_flags['--r2_cap']
+            # adjust with --r2_offset when Rsq=1 (Rsq-1). This column will be saved in output
+            df_merged['Rsq_group'+str(i+1)+'_offset_adj']=df_merged['Rsq_group'+str(i+1)]
+            mask_rsq = (df_merged['Rsq_group'+str(i+1)+'_offset_adj']==1)
+            # Substract --r2_offset when R2=1
+            df_merged.loc[mask_rsq, 'Rsq_group' + str(i + 1) + '_offset_adj'] -= dict_flags['--r2_offset']
 
             # Cannot use apply(), it will raise 'division by zero error' when Rsq=1
             # df_merged[col_name_r2+'_z_trans'] = df_merged['Rsq_group'+str(i+1)].apply(lambda x: 0.5 * np.log((1 + x) / (1 - x)))
             # The code below will return np.inf when Rsq=1. Then np.tanh(np.inf)=1
-            df_merged[col_name_r2 + '_z_trans'] = 0.5 * np.log((1 + np.sqrt(df_merged['Rsq_group'+str(i + 1)+'_cap_adj']) ) / (1 - np.sqrt(df_merged['Rsq_group'+str(i + 1)+'_cap_adj']) ))
+            df_merged[col_name_r2 + '_z_trans'] = 0.5 * np.log((1 + np.sqrt(df_merged['Rsq_group'+str(i + 1)+'_offset_adj']) ) / (1 - np.sqrt(df_merged['Rsq_group'+str(i + 1)+'_offset_adj']) ))
             df_merged[col_name_r2 + '_z_trans_weight_adj'] = df_merged[col_name_r2+'_z_trans'] * lst_number_of_individuals[i] # Z_transed_r * weight
             lst_col_names_r2_z_trans.append(col_name_r2 + '_z_trans')
             lst_col_names_r2_z_trans_weight_adj.append(col_name_r2 + '_z_trans_weight_adj')

@@ -3,6 +3,11 @@
 ## Cite IMMerge
 Zhu W., Chen H-H, Petty A.S., Petty L.E., Polikowsky H.G., Gamazon E.R., Below J.E., Highland H.M. (2022). *IMMerge: Merging imputation data at scale*. manuscript submitted for publication
 
+## About
+Genomic data is often processed in batches and analyzed together to save time. However, it is challenging to combine multiple large VCFs and properly handle imputation quality and missing variants due to limitations of available tools. To address these concerns, we developed IMMerge, a Python-based tool that takes advantage of multiprocessing to reduce running time. For the first time in a publicly available tool, imputation quality scores are correctly combined with Fisher’s z transformation.
+
+IMMerge completed the merge more quickly than bcftools. The biggest improvement in our tests was seen when combining 72,797 individuals, with a combined 7,871,941 variants, from three VCF files.
+![Performance](output_sample/benchmark.png?raw=true "Title")
 
 ## Required packages and versions
 1. This project works with python 3.7 and above. Below packages are needed:

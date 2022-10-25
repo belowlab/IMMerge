@@ -226,8 +226,11 @@ def write_info(args):
         if args.verbose:
             print(f'\n#### Processing files: Done. input={args.input[i]}')
 
-if __name__ == "__main__":
+def write_info_script_entry():
     write_info('')
+
+if __name__ == "__main__":
+    write_info_script_entry()
 
 
 

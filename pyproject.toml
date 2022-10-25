@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "immerge"
+readme = "README.md"
+requires-python = ">=3.6"
+dependencies = [
+    "numpy",
+    "pandas",
+    "xopen"
+]
+version = "0.0.4"
+license = {text = "MIT"}
+
+[project.urls]
+homepage = "https://github.com/belowlab/IMMerge"
+
+[project.scripts]
+immerge_merge_files = "IMMerge:run_merge_files_script_entry"
+immerge_make_info = "IMMerge:write_info_script_entry"

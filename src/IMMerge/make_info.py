@@ -210,10 +210,17 @@ def write_info(args):
                 ref = tmp_lst[idx_ref]
                 alt = tmp_lst[idx_alt]
                 info_val = tmp_lst[idx_info].split(';')
-                alt_frq = info_val[idx_alt_frq].split('=')[1]
-                maf = info_val[idx_maf].split('=')[1]
-                rsq = info_val[idx_rsq].split('=')[1]
-                genotyped = info_val[idx_genotyped]
+                for info in info_val:
+                    info_key, info_value = info.split('=')
+                    if info_value is None: # IMPUTED/TYPED/TYPED_ONLY
+                        genotyped = info_key
+                    elif info_key == args.col_names[0]: #AF
+                        alt_frq = info_value
+                    elif info_key == args.col_names[1]: #MAF
+                        maf = info_value
+                    elif info_key == args.col_names[2]: #R2
+                        rsq = info_value
+
                 output_fh.write(f'{snp}\t{rsid}\t{ref}\t{alt}\t{alt_frq}\t{maf}\t{rsq}\t{genotyped}\n')
                 count += 1
                 if args.verbose:

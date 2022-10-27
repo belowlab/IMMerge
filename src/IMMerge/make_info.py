@@ -173,7 +173,7 @@ def write_info(args):
             line = input_fh.readline().strip()  # Read lines that contain actual values
             info_val = line.split()[idx_info]
             idx = 0  # Track index in INFO column (fields separated by ';')
-            idx_alt_frq, idx_maf, idx_rsq, idx_genotyped = -1, -1, -1, -1  # FInd indices of these 4 columns
+            idx_alt_frq, idx_maf, idx_rsq, idx_genotyped = -1, -1, -1, -1  # Find indices of these 4 columns
             for val in info_val.split(';'):
                 key = val.split('=')[0]
                 if key == args.col_names[0]:  # AF

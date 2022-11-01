@@ -12,7 +12,7 @@ def process_args(arg_list = ''):
     '''
 
     lst_arg = ['--input', '--output_dir', '--output_fn', '--col_names', '--thread', '--write_with', '--use_rsid',
-               '--mixed_genotype_status', '--genotyped', '--imputed', '--verbose'] # Available arguments
+               '--mixed_genotype_status', '--genotyped_label', '--imputed_label', '--verbose'] # Available arguments
     parser = argparse.ArgumentParser(description='Generate info files')
     parser.add_argument('--input', nargs='*', type=str, required=True,
                         help='(Required) Multiple input files are allowed. Must in gzipped or bgziped VCF format.')
@@ -29,11 +29,11 @@ def process_args(arg_list = ''):
     parser.add_argument('--use_rsid', default='False', choices=['false', '0', 'False', 'true', 'True', '1'], type=str,
                         help='(Optional) Default is False. If input VCFs use rsID instead of chr:pos:ref:alt, set this option to True to avoid duplicate IDs (rsID may not be unique). Also need to use the same setting in merging step.')
     parser.add_argument('--mixed_genotype_status', default='False', type=str, choices=['false', '0', 'False', 'true', 'True', '1'],
-                        help='(Optional) Default is False. Valid values are (not case-sensitive): {0|1|True|False}. Whether some variants have more than one genotype status (True) or not (False). Use together with arguments --genotyped and --imputed. If False then output genotype status of each variant is the last genotype status in its INFO column. If True then output genotype status fo reach variant will be: ALL=all genotyped, SOME=at least one genotyped, NONE=no genotyped.')
-    parser.add_argument('--genotyped', default='TYPED/TYPED_ONLY', type=str,
-                        help='(Optional) Default is TYPED/TYPED_ONLY in concordance to TOPMed output. Label for genotyped variants. Multiple values can be supplied in one string separated by /. Only evaluated when --mixed_genotype_status is True.')
-    parser.add_argument('--imputed', default='IMPUTED', type=str,
-                        help='(Optional) Default is IMPUTED in concordance to TOPMed output. Label for imputed variants. Multiple values can be supplied in one string separated by /. Only evaluated when --mixed_genotype_status is True.')
+                        help='(Optional) Default is False. Valid values are (not case-sensitive): {0|1|True|False}. Whether some variants have more than one genotype status (True) or not (False). Use together with arguments --genotyped and --imputed. If False then output genotype status of each variant is the last genotype status in its INFO column. If True then output genotype status of each variant will be: ALL=all genotyped, SOME=at least one genotyped, NONE=no genotyped.')
+    parser.add_argument('--genotyped_label', default='TYPED/TYPED_ONLY', type=str,
+                        help='(Optional) Default is TYPED/TYPED_ONLY in concordance with TOPMed output. Label for genotyped variants. Multiple values can be supplied in one string separated by /. Only evaluated when --mixed_genotype_status is True.')
+    parser.add_argument('--imputed_label', default='IMPUTED', type=str,
+                        help='(Optional) Default is IMPUTED in concordance with TOPMed output. Label for imputed variants. Multiple values can be supplied in one string separated by /. Only evaluated when --mixed_genotype_status is True.')
     parser.add_argument('--verbose', default='False', choices=['false', '0', 'False', 'true', 'True', '1'], type=str,
                         help='(Optional) Print help message if True. Default is False. Valid values are (not case-sensitive): {0|1|True|False}.')
 
@@ -249,7 +249,7 @@ def write_info(args):
                 # Handle mixed genotype
                 # ALL=all genotyped, SOME=at least one genotyped, NONE=no genotyped, -1=field missing
                 if args.mixed_genotype_status:
-                    genotyped = genotype_status(genotyped, args.genotyped, args.imputed)
+                    genotyped = genotype_status(genotyped, args.genotyped_label, args.imputed_label)
 
                 # Sanity check
                 # Raise error if any field of AF, MAF, R2 and genotype status is missing

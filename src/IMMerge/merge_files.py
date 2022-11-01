@@ -311,6 +311,7 @@ def run_merge_files(args):
         --meta_info: (Optional) Valid values are {index of input file (1-based), 'none', 'all'}.
                     What meta information (lines start with '##') to include in output file. Default is 1 (meta information from the first input file).
         --use_rsid: (Optional) Default is False. If input VCFs use rsID instead of chr:pos:ref:alt, set this option to True to avoid duplicate IDs (rsID may not be unique).
+                    New IDs in chr:pos:ref:alt format instead of rsID will be used to merge.
                     Use make_info.py to make info files, or follow the required format.
         --verbose: (Optional) Default is False. Print more messages.
     Return:

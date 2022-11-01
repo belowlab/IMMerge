@@ -1,7 +1,7 @@
 # IMMerge: Merging imputation data at scale
 
 ## Cite IMMerge
-Zhu W., Chen H-H, Petty A.S., Petty L.E., Polikowsky H.G., Gamazon E.R., Below J.E., Highland H.M. (2022). *IMMerge: Merging imputation data at scale*. manuscript submitted for publication
+Zhu W., Chen H-H, Petty A.S., Petty L.E., Polikowsky H.G., Gamazon E.R., Below J.E., Highland H.M. (2022). *IMMerge: Merging imputation data at scale*. manuscript accepted for publication
 
 ## About
 Genomic data is often processed in batches and analyzed together to save time. However, it is challenging to combine multiple large VCFs and properly handle imputation quality and missing variants due to limitations of available tools. To address these concerns, we developed IMMerge, a Python-based tool that takes advantage of multiprocessing to reduce running time. For the first time in a publicly available tool, imputation quality scores are correctly combined with Fisher’s z transformation.
@@ -61,7 +61,11 @@ IMMerge completed the merge more quickly than bcftools. The biggest improvement 
         * ```--use_rsid```: (Optional) Default is False.
                     If input VCFs use rsID instead of chr:pos:ref:alt, set this option to True to avoid duplicate IDs (rsID may not be unique).
                     Also need to use the same setting in merging step.
-        * ```--verbose```: (Optional) Print help message if True. Default is False. Valid values are (not case-sensitive): {0|1|True|False}
+		* ```--mixed_genotype_status```: (Optional) Default is False. Valid values are (not case-sensitive): {0|1|True|False}. Whether some variants have more than one genotype status (True) or not (False). Use together with arguments ```--genotyped``` and ```--imputed```. If False then output genotype status of each variant is the last genotype status in its INFO column. If True then output genotype status fo reach variant will be: ALL=all genotyped, SOME=at least one genotyped, NONE=no genotyped.')
+      
+        * ```--genotyped```: (Optional) Default is TYPED/TYPED_ONLY in concordance to TOPMed output. Label for genotyped variants. Multiple values can be supplied in one string separated by /')
+		* ```--imputed```: (Optional) Default is IMPUTED in concordance to TOPMed output. Label for imputed variants. Multiple values can be supplied in one string separated by /')
+		* ```--verbose```: (Optional) Print help message if True. Default is False. Valid values are (not case-sensitive): {0|1|True|False}
     * Information files of corresponding VCFs are required in order to merge efficiently. These are files with **.info.gz** suffix if your files are directly downloaded from TOPmed imputation server.
 Otherwise, users should manually create info files follow the format of TOPmed imputation server. Examples can be found in ```data_sample/``` in this repo.
    * Example info file:  
@@ -127,7 +131,7 @@ python src/IMMerge/merge_files.py \
 	--missing 1
 ```
 
-## Run IMMerge as a python module (available on [PyPI](https://pypi.org/project/IMMerge/))
+## (Beta) Run IMMerge as a python module (available on [PyPI](https://pypi.org/project/IMMerge/))
 Install IMMerge with ```pip install IMMerge```.
 Arguments should be passed to IMMerge functions in a dictionary and follow the same rules as in command line calls.
 The command line examples above can be executed with below python code:

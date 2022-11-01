@@ -47,8 +47,11 @@ IMMerge completed the merge more quickly than bcftools. The biggest improvement 
 	* ```--check_duplicate_id```: (Optional) Default is False. Check if there are duplicate IDs, then rename non-first IDs to ID:2, ID:3, ..., ID:index_of_input_file+1.
 	* ```--write_with```: (Optional) Default is bgzip. Write to bgziped file with bgzip. User can supply specific path to bgzip such as ```/user/bin/bgzip```.
 	* ```--meta_info```: (Optional) Valid values are {index of input file (1-based), 'none', 'all'}. Indicates what meta information (lines start with '##') to include in output file. Default is 1 (meta information from the first input file).
+	* ```--use_rsid```: (Optional) Default is False. If input VCFs use rsID instead of chr:pos:ref:alt, set this option to True to avoid duplicate IDs (rsID may not be unique).
+                    New IDs in chr:pos:ref:alt format instead of rsID will be used to merge.
+                    Use make_info.py to make info files, or follow the required format.
 	* ```--help```: (Optional) Exit program after printing out help info, ignore any other flags and values provided.
-3. For generating info files (```make_info.py```)  
+3. For generating info files (```make_info.py```), if *.info.gz files are missing
 	* Valid flags:
 		* ```--input```: (Required) Multiple input files are allowed. Must in gzipped or bgziped VCF format. 
 		* ```--output_dir```: (Optional) Directory for output files. Default is current working directory.
@@ -60,7 +63,7 @@ IMMerge completed the merge more quickly than bcftools. The biggest improvement 
         * ```--write_with```: (Optional) Default is bgzip, but gzip is also valid. User specified program to write compressed file.
         * ```--use_rsid```: (Optional) Default is False.
                     If input VCFs use rsID instead of chr:pos:ref:alt, set this option to True to avoid duplicate IDs (rsID may not be unique).
-                    Also need to use the same setting in merging step.
+                    New IDs in chr:pos:ref:alt format will be created. Also need to use the same setting in merging step.
 		* ```--mixed_genotype_status```: (Optional) Default is False. Valid values are (not case-sensitive): {0|1|True|False}. Whether some variants have more than one genotype status (True) or not (False). Use together with arguments ```--genotyped``` and ```--imputed```. If False then output genotype status of each variant is the last genotype status in its INFO column. If True then output genotype status fo reach variant will be: ALL=all genotyped, SOME=at least one genotyped, NONE=no genotyped.')
       
         * ```--genotyped```: (Optional) Default is TYPED/TYPED_ONLY in concordance to TOPMed output. Label for genotyped variants. Multiple values can be supplied in one string separated by /')

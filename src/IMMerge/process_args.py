@@ -39,7 +39,8 @@ def process_args(arg_list = ''):
 
     parser = argparse.ArgumentParser()
     lst_args = ['--input', '--info', '--output', '--thread', '--missing', '--na_rep', '--r2_threshold', '--r2_output',
-                '--r2_offset', '--duplicate_id', '--check_duplicate_id', '--write_with', '--meta_info', '--use_rsid', '--verbose']
+                '--r2_offset', '--duplicate_id', '--check_duplicate_id', '--write_with', '--meta_info', '--mixed_genotype_status',
+                '--use_rsid', '--verbose']
     # Help messages of each option
     dict_help = {
         '--input': '(Required) Files to be merged, multiple files are allowed. Must in gzipped or bgziped VCF format',
@@ -55,6 +56,9 @@ def process_args(arg_list = ''):
         '--check_duplicate_id':'(Optional) Default is False. Check if there are duplicate IDs, then rename non-first IDs to ID:2, ID:3, ..., ID:index_of_input_file+1',
         '--write_with': '(Optional) Default is bgzip. Write to bgziped file with bgzip. User can supply specific path to bgzip such as /user/bin/bgzip',
         '--meta_info': "(Optional) Valid values are {index of input file (1-based), 'none', 'all'}. What meta information (lines start with '##') to include in output file. Default is 1 (meta information from the first input file)",
+        '--mixed_genotype_status':'(Optional) Default is False. Valid values are (not case-sensitive): {0|1|True|False}. Whether some variants have more than one genotype status (True) or not (False) in input files. Use together with arguments --genotyped_label and --imputed_label. If False then output genotype status of each variant is the genotype status in the first input file. If True then output genotype status will be: ALL=all genotyped, SOME=at least one genotyped, NONE=no genotyped.',
+        '--genotyped_label':'(Optional) Default is TYPED/TYPED_ONLY in concordance with TOPMed output. Label for genotyped variants. Multiple values can be supplied in one string separated by /. Only evaluated when --mixed_genotype_status is True.',
+        '--imputed_label':'(Optional) Default is IMPUTED in concordance with TOPMed output. Label for imputed variants. Multiple values can be supplied in one string separated by /. Only evaluated when --mixed_genotype_status is True.',
         '--use_rsid':'(Optional) Default is False. If input VCFs use rsID instead of chr:pos:ref:alt, set this option to True to avoid duplicate IDs (rsID may not be unique). Use make_info.py to make info files, or follow the required format.',
         '--verbose': '(Optional) Default is False. Print more messages.'}
 
@@ -72,6 +76,9 @@ def process_args(arg_list = ''):
                     '--duplicate_id': [0, int],
                     '--write_with':['bgzip', str],
                     '--meta_info':['1', str],
+                    '--mixed_genotype_status':['0', str, ['false', '0', 'False', 'true', 'True', '1']],
+                    '--genotyped_label':['TYPED/TYPED_ONLY', str],
+                    '--imputed_label':['IMPUTED', str],
                     '--use_rsid':['0', str, ['false', '0', 'False', 'true', 'True', '1']],
                     '--verbose': ['0', str, ['false', '0', 'False', 'true', 'True', '1']]}
     # Add arguments
@@ -80,7 +87,7 @@ def process_args(arg_list = ''):
             parser.add_argument(arg, help=dict_help[arg], nargs='*', required=True)
         elif arg == '--info':
             parser.add_argument(arg, help=dict_help[arg], nargs='*', default='')
-        elif arg == '--r2_output' or arg == '--verbose' or arg=='--check_duplicate_id' or arg=='--use_rsid':
+        elif arg in ['--r2_output', '--verbose', '--check_duplicate_id', '--use_rsid', '--mixed_genotype_status']:
             parser.add_argument(arg, help=dict_help[arg], default=dict_default[arg][0], type=dict_default[arg][1], choices=dict_default[arg][2])
         else:
             parser.add_argument(arg, help=dict_help[arg], default=dict_default[arg][0], type=dict_default[arg][1])
@@ -178,7 +185,7 @@ def process_args(arg_list = ''):
     #     exit()
 
     # Check --r2_offset
-    if dict_flags['--r2_offset'] <0 or dict_flags['--r2_offset']>=1:
+    if dict_flags['--r2_offset']<0 or dict_flags['--r2_offset']>=1:
         print('Error: Invalid value of --r2_offset:', dict_flags['--r2_offset'])
         print('\t- Value of --r2_offset should be numeric between 0 and 1\nExit')
         exit()

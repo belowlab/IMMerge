@@ -3,6 +3,7 @@ setup.cfg
 exe_time_output.txt
 data_sample/
 tmp_out/
+tests/
 src/.idea/
 demo_make_info.sh
 .DS_Store

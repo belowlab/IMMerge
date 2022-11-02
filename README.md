@@ -48,10 +48,11 @@ IMMerge completed the merge more quickly than bcftools. The biggest improvement 
 	* ```--write_with```: (Optional) Default is bgzip. Write to bgziped file with bgzip. User can supply specific path to bgzip such as ```/user/bin/bgzip```.
 	* ```--meta_info```: (Optional) Valid values are {index of input file (1-based), 'none', 'all'}. Indicates what meta information (lines start with '##') to include in output file. Default is 1 (meta information from the first input file).
 	* ```--mixed_genotype_status```: (Optional) Default is False. Valid values are (not case-sensitive): {0|1|True|False}.
-	  Whether some variants have more than one genotype status (True) or not (False) in input files.
+	  Whether some variants have more than one genotype status (True) or not (False) in input files. 
 	  Use together with arguments --genotyped_label and --imputed_label.
-	  If False then output genotype status of each variant is the genotype status in the first input file.
-	  If True then output genotype status will be: ALL=all genotyped, SOME=at least one genotyped, NONE=no genotyped.
+	  If False then output genotype status of each variant is the genotype status in the first input file, or the first file a given SNP is found.
+	  If True then output genotype status will be: ALL=all genotyped, SOME=at least one genotyped, NONE=no genotyped. 
+	  If some *.info.gz files contain ALL/SOME/NONE while others use GENOTYPED/TYPED, final genotype status will be mixed of ALL/SOME/NONE/GENOTYPED/TYPED.
 	* ```--genotyped_label```: (Optional) Default is TYPED/TYPED_ONLY in concordance with TOPMed output. Label for genotyped variants.
 	  Multiple values can be supplied in one string separated by /. Only evaluated when --mixed_genotype_status is True. 
 	* ```--imputed_label```: (Optional) Default is IMPUTED in concordance with TOPMed output. Label for genotyped variants.

@@ -47,6 +47,15 @@ IMMerge completed the merge more quickly than bcftools. The biggest improvement 
 	* ```--check_duplicate_id```: (Optional) Default is False. Check if there are duplicate IDs, then rename non-first IDs to ID:2, ID:3, ..., ID:index_of_input_file+1.
 	* ```--write_with```: (Optional) Default is bgzip. Write to bgziped file with bgzip. User can supply specific path to bgzip such as ```/user/bin/bgzip```.
 	* ```--meta_info```: (Optional) Valid values are {index of input file (1-based), 'none', 'all'}. Indicates what meta information (lines start with '##') to include in output file. Default is 1 (meta information from the first input file).
+	* ```--mixed_genotype_status```: (Optional) Default is False. Valid values are (not case-sensitive): {0|1|True|False}.
+	  Whether some variants have more than one genotype status (True) or not (False) in input files.
+	  Use together with arguments --genotyped_label and --imputed_label.
+	  If False then output genotype status of each variant is the genotype status in the first input file.
+	  If True then output genotype status will be: ALL=all genotyped, SOME=at least one genotyped, NONE=no genotyped.
+	* ```--genotyped_label```: (Optional) Default is TYPED/TYPED_ONLY in concordance with TOPMed output. Label for genotyped variants.
+	  Multiple values can be supplied in one string separated by /. Only evaluated when --mixed_genotype_status is True. 
+	* ```--imputed_label```: (Optional) Default is IMPUTED in concordance with TOPMed output. Label for genotyped variants.
+	  Multiple values can be supplied in one string separated by /. Only evaluated when --mixed_genotype_status is True. 
 	* ```--use_rsid```: (Optional) Default is False. If input VCFs use rsID instead of chr:pos:ref:alt, set this option to True to avoid duplicate IDs (rsID may not be unique).
                     New IDs in chr:pos:ref:alt format instead of rsID will be used to merge.
                     Use make_info.py to make info files, or follow the required format.
@@ -64,11 +73,15 @@ IMMerge completed the merge more quickly than bcftools. The biggest improvement 
         * ```--use_rsid```: (Optional) Default is False.
                     If input VCFs use rsID instead of chr:pos:ref:alt, set this option to True to avoid duplicate IDs (rsID may not be unique).
                     New IDs in chr:pos:ref:alt format will be created. Also need to use the same setting in merging step.
-		* ```--mixed_genotype_status```: (Optional) Default is False. Valid values are (not case-sensitive): {0|1|True|False}. Whether some variants have more than one genotype status (True) or not (False). Use together with arguments ```--genotyped``` and ```--imputed```. If False then output genotype status of each variant is the last genotype status in its INFO column. If True then output genotype status fo reach variant will be: ALL=all genotyped, SOME=at least one genotyped, NONE=no genotyped.')
-      
-        * ```--genotyped```: (Optional) Default is TYPED/TYPED_ONLY in concordance to TOPMed output. Label for genotyped variants. Multiple values can be supplied in one string separated by /')
-		* ```--imputed```: (Optional) Default is IMPUTED in concordance to TOPMed output. Label for imputed variants. Multiple values can be supplied in one string separated by /')
+		* ```--mixed_genotype_status```: (Optional) Default is False. Valid values are (not case-sensitive): {0|1|True|False}.
+		  Whether some variants have more than one genotype status (True) or not (False).
+		  Use together with arguments ```--genotyped``` and ```--imputed```.
+		  If False then output genotype status of each variant is the last genotype status in its INFO column.
+		  If True then output genotype status fo reach variant will be: ALL=all genotyped, SOME=at least one genotyped, NONE=no genotyped.
+        * ```--genotyped_label```: (Optional) Default is TYPED/TYPED_ONLY in concordance to TOPMed output. Label for genotyped variants. Multiple values can be supplied in one string separated by /
+		* ```--imputed_label```: (Optional) Default is IMPUTED in concordance to TOPMed output. Label for imputed variants. Multiple values can be supplied in one string separated by /
 		* ```--verbose```: (Optional) Print help message if True. Default is False. Valid values are (not case-sensitive): {0|1|True|False}
+		* ```--help```: Check available arguments and descriptions.
     * Information files of corresponding VCFs are required in order to merge efficiently. These are files with **.info.gz** suffix if your files are directly downloaded from TOPmed imputation server.
 Otherwise, users should manually create info files follow the format of TOPmed imputation server. Examples can be found in ```data_sample/``` in this repo.
    * Example info file:  

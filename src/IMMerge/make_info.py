@@ -138,12 +138,13 @@ def genotype_status(gp_list, genotyped_label, imputed_label):
             any_gped = True
         elif gp_status in imputed_list:
             any_imputed = True
-    if any_gped and any_imputed:
-        status = 'SOME'
-    elif any_gped and not any_imputed:
+
+    if any_gped and not any_imputed:
         status = 'ALL'
     elif not any_gped and any_imputed:
         status = 'NONE'
+    else:
+        status = 'SOME'
     return status
 
 def write_info(args):

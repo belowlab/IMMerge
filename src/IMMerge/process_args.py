@@ -40,7 +40,7 @@ def process_args(arg_list = ''):
     parser = argparse.ArgumentParser()
     lst_args = ['--input', '--info', '--output', '--thread', '--missing', '--na_rep', '--r2_threshold', '--r2_output',
                 '--r2_offset', '--duplicate_id', '--check_duplicate_id', '--write_with', '--meta_info', '--mixed_genotype_status',
-                '--use_rsid', '--verbose']
+                '--genotyped_label', '--imputed_label', '--use_rsid', '--verbose']
     # Help messages of each option
     dict_help = {
         '--input': '(Required) Files to be merged, multiple files are allowed. Must in gzipped or bgziped VCF format',
@@ -97,23 +97,12 @@ def process_args(arg_list = ''):
     else: # If IMMerged is called as a module in python script
         args = parser.parse_args(arg_list)
 
-    # Convert --check_duplicate_id to boolean
-    if args.check_duplicate_id.upper()=='FALSE' or args.check_duplicate_id=='0':
-        args.check_duplicate_id = False
-    else:
-        args.check_duplicate_id = True
-
-    # Convert use_rsid to boolean
-    if args.use_rsid.upper() == 'FALSE' or args.use_rsid == '0':
-        args.use_rsid = False
-    else:
-        args.use_rsid = True
-
-    # Convert verbose to boolean
-    if args.verbose.upper()=='FALSE' or args.verbose=='0':
-        args.verbose = False
-    else:
-        args.verbose = True
+    # Convert --check_duplicate_id, --use_rsid, --mixed_genotype_status and --verbose to boolean
+    for arg in ['check_duplicate_id', 'use_rsid', 'mixed_genotype_status', 'verbose']:
+        if eval(f"args.{arg}.upper()=='FALSE'") or eval(f"args.{arg}=='0'"):
+            exec(f'args.{arg} = False')
+        else:
+            exec(f'args.{arg} = True')
 
     # Add values to --info if not provided by user
     if args.info=='':

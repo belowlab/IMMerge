@@ -39,24 +39,25 @@ def __get_lst_info_df(dict_flags):
 # Parameters:
 # - lst_info_df: a list containing names of .info.gz files
 # - cols_to_keep: a list of columns to be saved in the output file.
-#                 In this version use ['SNP', 'REF(0)', 'ALT(1)', 'Genotyped','ALT_Frq', 'MAF', 'Rsq']
+#                 In this version use ['SNP', 'REF(0)', 'ALT(1)', 'Genotyped','ALT_Frq', 'MAF', 'Rsq'], last 3 items must in order AF, MAF, Rsq
 #                 Info files generated from make_info.py follow this naming style
 # Return: a Dataframe with all variants and columns REF(0), ALT(1), Genotyped, ALT_Frq, MAF and Rsq
 # - For duplicated fields MAF and Rsq, column are renamed as MAF_group1, Rsq_group1, etc
 # - lst_index_col_names: a list to store index column names of each dataframe, such as [index_group1, index_group2, ...]
 def __merge_snps(lst_info_df, cols_to_keep=['SNP', 'REF(0)', 'ALT(1)', 'Genotyped', 'ALT_Frq', 'MAF', 'Rsq']):
-    # (NO) REF(0), ALT(1), Genotyped should be the same for all files,
-    # so only keep these columns from one dataframe to merge
-    # Notice a special case: if current variant is missing from the first file,
-    #                        then need to fill with columns from other files
-    i=0
-    df_merged='' # A DataFrame of merged .info.gz df
+    # Only need these columns to merge
+    i = 0
+    df_merged = '' # A DataFrame of merged .info.gz df
     lst_index_col_names = [] # A list to store column names of index columns
 
-    # Create pos column to merge on
-    # SNP in different files may have flipped REF and ALT, but POS is always the same
+    # Create POS column to merge on, since SNP in different files may have flipped REF and ALT, but POS is always the same
+    # Convert MAF, Alt_frq and Rsq to numeric
+    col_name_alt_frq, col_name_maf, col_name_r2 = cols_to_keep[-3:]
     for df in lst_info_df:
         df['POS'] = df['SNP'].apply(lambda x: int(x.split(':')[1]))
+        df[col_name_alt_frq] = pd.to_numeric(df[col_name_alt_frq], errors='coerce')
+        df[col_name_maf] = pd.to_numeric(df[col_name_maf], errors='coerce')
+        df[col_name_r2] = pd.to_numeric(df[col_name_r2], errors='coerce')
 
     while i<len(lst_info_df):
         if i==0: # Merge the 1st and 2nd df
@@ -66,7 +67,7 @@ def __merge_snps(lst_info_df, cols_to_keep=['SNP', 'REF(0)', 'ALT(1)', 'Genotype
             # Eg. variant rs0000 is from row index 1 in input file 1 and row #3 in input file 2
             df_merged = lst_info_df[i][cols_to_keep+['POS']].reset_index().merge(lst_info_df[i+1][cols_to_keep+['POS']].reset_index(),
                                                            how='outer',
-                                                           on='POS',
+                                                           on=['SNP', 'POS'],
                                                            suffixes=('_group'+str(i+1), '_group'+str(i+2)))
 
             lst_index_col_names.append('index_group'+str(i+1))
@@ -75,18 +76,57 @@ def __merge_snps(lst_info_df, cols_to_keep=['SNP', 'REF(0)', 'ALT(1)', 'Genotype
         else:
             # Merge and rename columns of df with correct suffix (ie. _groupX)
             df_merged = df_merged.merge(lst_info_df[i][cols_to_keep+['POS']].reset_index().rename(columns={'MAF':'MAF_group'+str(i+1),
-                                                                                                   'Rsq':'Rsq_group'+str(i+1),
-                                                                                                   'ALT_Frq':'ALT_Frq_group'+str(i+1),
-                                                                                                   'index':'index_group' + str(i+1)}),
+                                                                                                           'Rsq':'Rsq_group'+str(i+1),
+                                                                                                           'ALT_Frq':'ALT_Frq_group'+str(i+1),
+                                                                                                           'Genotyped':'Genotyped_group' + str(i+1),
+                                                                                                           'index':'index_group' + str(i+1)}),
                                         how='outer',
-                                        on='POS')
+                                        on=['SNP', 'POS'])
             lst_index_col_names.append('index_group' + str(i+1))
-            i+=1
-    # # Get chr and position from snp IDs
-    # # df_merged['chr'] = df_merged['SNP'].apply(lambda x: x.split(':')[0])
-    # df_merged['pos'] = df_merged['SNP'].apply(lambda x: x.split(':')[1])
-
+            i += 1
+    # Get chr from snp IDs, maybe add this feature in the future
+    # df_merged['chr'] = df_merged['SNP'].apply(lambda x: x.split(':')[0])
     return df_merged, lst_index_col_names
+
+
+# This function determines genotype status of each variant
+# Patameters:
+# - df: a DataFrame to be processes (df_merge in this script)
+# - genotyped_label: label(s) for genotyped variants ('TYPED' and 'TYPED_ONLY' in TOPmed)
+# - imputed_label: label(s) for imputed variants ('IMPUTED' in TOPmed)
+# - number_of_input_files: Number of input files
+# Return:
+# - df will be modified inplace such that
+#   - Genotype status of individual input files (Genotyped_group1, Genotyped_group2, .. etc.) will be removed
+#   - A column named 'Genotyped' of final mixed genotype status will be retained
+#       - If mixed_genotype=True, final genotype status are: ALL=All genotyped; SOME=Some genotyped; NONE=None genotyped
+#       - If mixed_genotype=False, final genotype status will be the same as in first input file, or the first file a given SNP is found.
+#       - If some *.info.gz files contain ALL/SOME/NONE while others use GENOTYPED/TYPED, final genotype status will be mixed of ALL/SOME/NONE/GENOTYPED/TYPED
+def get_genotype_status(df, mixed_genotype, genotyped_labels, imputed_labels, number_of_input_files):
+    # Get column names of genotype status of each input file
+    lst_genotype_col_names = [f'Genotyped_group{i+1}' for i in range(number_of_input_files)]
+    if not mixed_genotype: # Use the first genotype status available
+        df['Genotyped'] = df[lst_genotype_col_names].fillna(method='backfill', axis=1)[lst_genotype_col_names[0]]
+    else:
+        lst_genotyped_label = genotyped_labels.split('/')
+        lst_imputed_label = imputed_labels.split('/')
+        print('\nGenotype status label(s) used for genotyped variants:', lst_genotyped_label)
+        print('Genotype status label(s) used for imputed variants:', lst_imputed_label)
+
+        df['Genotyped'] = 'NONE' # Prefill with 'NONE'
+        # Find ALL and SOME variants, change their genotype status
+        mask_total_gped = df[lst_genotype_col_names]==lst_genotyped_label[0]
+        for gp_label in lst_genotyped_label[1:]+['ALL']: # Include 'ALL' as label to 'genotyped' variants
+            mask_total_gped = mask_total_gped | (df[lst_genotype_col_names]==gp_label)
+        mask_all = mask_total_gped.all(axis=1)
+
+        # If genotype status of any input file is 'SOME', a given variant is also 'SOME'
+        # Find variants with at least one 'genotyped' status and fill them with 'SOME', then reassign SNPs with only genotyped status with 'ALL'
+        mask_any_gped = (mask_total_gped.any(axis=1)) | (df[lst_genotype_col_names]=='SOME').any(axis=1)
+
+        df.loc[mask_any_gped, 'Genotyped'] = 'SOME'
+        df.loc[mask_all, 'Genotyped'] = 'ALL'
+    df.drop(columns=lst_genotype_col_names, inplace=True)
 
 
 # This function calculated r2 (use method defined by dict_flags['--r2_output'])， MAF, and altFrq,
@@ -186,12 +226,11 @@ def __calculate_r2_maf_altFrq(df_merged, col_name_r2_combined,
     df_merged.drop(labels=lst_col_names_maf_adj, axis=1, inplace=True)
     df_merged.drop(labels=lst_col_names_alt_frq_adj, axis=1, inplace=True)
     df_merged.drop(labels=lst_col_names_weight_adj, axis=1, inplace=True)
-
     return lst_number_of_individuals    # Return number of individuals in each file
-# ----------------- End of helper functions -----------------
+
 
 # This function save excluded and kept variants into .txt files
-# Parameter:
+# Parameters:
 #  - df_merged: A DataFrame of variants from all input files with desired fields
 #  - missing: A variant is allowed to be missing in this number of files. Otherwise it will be excluded
 #  - lst_index_col_names: original indices of each input dataframe are stored in these column for sorting purpose
@@ -204,17 +243,20 @@ def __process_output(df_merged, dict_flags, lst_index_col_names):
     mask_to_keep, mask_to_exclude = '', ''   # Use this when --missing is 0
 
     lst_col_names = []  # A list to store column names of Rsq (such as Rsq_group1, Rsq_group2, etc.)
-
+    lst_genotype_status = []
     for i in range(len(dict_flags['--input'])):
         col_name_r2 = 'Rsq_group' + str(i + 1)
-        col_name_maf = 'MAF_group' + str(i + 1)
-        col_name_alt_frq = 'ALT_Frq_group' + str(i + 1) # Column name of alternative allele
-        # Convert values of r2, MAF and ALT_Frq columns from strings to numbers for later calculations
-        df_merged[col_name_r2] = pd.to_numeric(df_merged[col_name_r2], errors='coerce')
-        df_merged[col_name_maf] = pd.to_numeric(df_merged[col_name_maf], errors='coerce')
-        df_merged[col_name_alt_frq] = pd.to_numeric(df_merged[col_name_alt_frq], errors='coerce')
-        df_merged['pos'] = pd.to_numeric(df_merged['pos'], errors='coerce')
+        # col_name_genotype = 'Genotyped_group' + str(i + 1) # Genotype status
+        # lst_genotype_status.append(col_name_genotype)
 
+        # col_name_maf = 'MAF_group' + str(i + 1)
+        # col_name_alt_frq = 'ALT_Frq_group' + str(i + 1) # Column name of alternative allele
+        # # Convert values of r2, MAF and ALT_Frq columns from strings to numbers for later calculations
+        # df_merged[col_name_r2] = pd.to_numeric(df_merged[col_name_r2], errors='coerce')
+        # df_merged[col_name_maf] = pd.to_numeric(df_merged[col_name_maf], errors='coerce')
+        # df_merged[col_name_alt_frq] = pd.to_numeric(df_merged[col_name_alt_frq], errors='coerce')
+
+        # Process retained and excluded SNPs
         if dict_flags['--missing'] == 0:  # If only save variants shared by all input files
             # Check columns of Rsq (MAF also works) such as: Rsq_group1, Rsq_group2,...
             # If MAF_groupX is NaN, then this variant is missing from the corresponding groupX.
@@ -232,6 +274,10 @@ def __process_output(df_merged, dict_flags, lst_index_col_names):
 
         lst_col_names.append(col_name_r2)  # Save column names of Rsq_group1, Rsq_group2, etc.
 
+    # Determine genotype status: ALL=All genotyped, SOME=Some genotype, NONE=none genotyped
+    get_genotype_status(df_merged, dict_flags['--mixed_genotype_status'], dict_flags['--genotyped_label'],
+                        dict_flags['--imputed_label'], len(dict_flags['--input']))
+
     # Calculate combined r2 (first, weighted_average or mean)
     col_name_r2_combined = 'Rsq_combined'
     col_name_maf_combined = 'MAF_combined'
@@ -239,8 +285,6 @@ def __process_output(df_merged, dict_flags, lst_index_col_names):
 
     lst_number_of_individuals = __calculate_r2_maf_altFrq(df_merged, col_name_r2_combined,
                                                           col_name_maf_combined, col_name_alt_frq_combined, dict_flags)
-
-    # 2022/10 update: Determine genotype status
 
     # Save result to output files
     float_format = '%.6f'
@@ -264,7 +308,6 @@ def __process_output(df_merged, dict_flags, lst_index_col_names):
             log_fh.write('\tTotal number of all input files combined: '+str(len(df_merged))+'\n')
             log_fh.write('\tNumber of saved variants:'+str(len(df_merged[mask_to_keep]))+'\n')
             log_fh.write('\tNumber of excluded variants:'+str(len(df_merged[mask_to_exclude]))+'\n')
-
     else:   # Use user specify allowed missingness, max value is number of input files
         # Calculate number of missing files (by number of NA value of Rsq column)
         df_merged['missing'] = df_merged[lst_col_names].isna().sum(axis=1)

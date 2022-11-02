@@ -67,7 +67,7 @@ def __merge_snps(lst_info_df, cols_to_keep=['SNP', 'REF(0)', 'ALT(1)', 'Genotype
             # Eg. variant rs0000 is from row index 1 in input file 1 and row #3 in input file 2
             df_merged = lst_info_df[i][cols_to_keep+['POS']].reset_index().merge(lst_info_df[i+1][cols_to_keep+['POS']].reset_index(),
                                                            how='outer',
-                                                           on=['SNP', 'POS'],
+                                                           on=['SNP', 'POS', 'REF(0)', 'ALT(1)'],
                                                            suffixes=('_group'+str(i+1), '_group'+str(i+2)))
 
             lst_index_col_names.append('index_group'+str(i+1))
@@ -81,7 +81,7 @@ def __merge_snps(lst_info_df, cols_to_keep=['SNP', 'REF(0)', 'ALT(1)', 'Genotype
                                                                                                            'Genotyped':'Genotyped_group' + str(i+1),
                                                                                                            'index':'index_group' + str(i+1)}),
                                         how='outer',
-                                        on=['SNP', 'POS'])
+                                        on=['SNP', 'POS', 'REF(0)', 'ALT(1)'])
             lst_index_col_names.append('index_group' + str(i+1))
             i += 1
     # Get chr from snp IDs, maybe add this feature in the future

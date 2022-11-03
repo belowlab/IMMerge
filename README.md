@@ -90,7 +90,7 @@ Otherwise, users should manually create info files follow the format of TOPmed i
 		| SNP                | REF(0) | ALT(1) | ALT_Frq | MAF | Rsq | Genotyped |
 		| ------------------ | ------ | ------ | ------- | --- | --- | --------- |
 		| chr21:10000777:C:A | C | A | 0.00003 | 0.00003 | 0.44840 | IMPUTED |
-		| chr21:10000931:T:G | T | G | 0.00004 | 0.00004 | 0.46070 | IMPUTED |
+		| chr21:10000931:T:G | T | G | 0.00004 | 0.00004 | 0.46070 | TYPED |
 		| chr21:10001844:A:G | A | G | 0.00002 | 0.00002 | 0.65686 | IMPUTED |
 		| chr21:10001985:C:T | C | T | 0.00001 | 0.00001 | 0.18849 | IMPUTED |
 	* SNP, REF(0), ALT(1), ALT_Frq, MAF, Rsq and Genotyped are required and fixed columns. Columns with other names are ignored.

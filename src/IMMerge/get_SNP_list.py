@@ -293,7 +293,7 @@ def __process_output(df_merged, dict_flags, lst_index_col_names):
         # Or use %.6f, for 6 precision after dot. But if value is stoo small will be round to 0
         # Save to *.variant_retained.info.txt sorted by position and index in each input file,
         # since there could be multiple variants at the same position
-        df_merged[mask_to_keep].sort_values(by=['POS']+lst_index_col_names)\
+        df_merged[mask_to_keep].sort_values(by=['POS', 'SNP']+lst_index_col_names)\
             .drop(columns=lst_index_col_names+['POS'])\
             .to_csv(to_keep_fn, index=False, sep='\t', na_rep=dict_flags['--na_rep'], float_format=float_format)
         df_merged[mask_to_exclude].drop(columns=lst_index_col_names+['POS']).to_csv(to_exclude_fn, index=False,
@@ -319,7 +319,7 @@ def __process_output(df_merged, dict_flags, lst_index_col_names):
         mask_to_exclude = (df_merged['missing']>dict_flags['--missing']) | \
                           (df_merged[col_name_r2_combined]<dict_flags['--r2_threshold'])
 
-        df_merged.loc[mask_to_keep].sort_values(by=['POS']+lst_index_col_names)\
+        df_merged.loc[mask_to_keep].sort_values(by=['POS', 'SNP']+lst_index_col_names)\
                 .drop(columns=lst_index_col_names+['POS', 'missing'])\
                 .to_csv(to_keep_fn, index=False, sep='\t', na_rep=dict_flags['--na_rep'], float_format=float_format)
         df_merged.loc[mask_to_exclude].drop(columns=lst_index_col_names+['POS', 'missing'])\
@@ -337,7 +337,7 @@ def __process_output(df_merged, dict_flags, lst_index_col_names):
 
     # *.index.text is for debugging purpose, it is not needed in merge
     if dict_flags['--verbose']:
-        df_merged.sort_values(by=['POS']+lst_index_col_names)[['SNP']+lst_index_col_names].to_csv(dict_flags['--output']+'_index.txt',
+        df_merged.sort_values(by=['POS', 'SNP']+lst_index_col_names)[['SNP']+lst_index_col_names].to_csv(dict_flags['--output']+'_index.txt',
                                                                                               sep='\t', index=False, na_rep='-')
     print('\nNumbers of individuals in each input file:', lst_number_of_individuals)
 

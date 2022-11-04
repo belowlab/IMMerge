@@ -326,7 +326,7 @@ def run_merge_files(args):
     start_time = time.time()  # Track execution time
 
     global VERSION  # Global variable Version of IMMerge
-    VERSION = '0.0.3'
+    VERSION = '0.0.4'
     global LOG_TXT
     LOG_TXT = ''  # Global variable to track info printed. Write to log file when run is finished
 

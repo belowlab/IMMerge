@@ -163,15 +163,16 @@ def search_SNP_and_read_lines(snp, fh):
             input_snp = f'{tmp_lst[0]}:{tmp_lst[1]}:{tmp_lst[3]}:{tmp_lst[4]}'
         else:
             input_snp = line.split(maxsplit=inx_snp_ID + 1)[inx_snp_ID]
+
         if input_snp == snp: # if found
             break
         else:
             line = fh.readline().strip()  # Read in each line to search for the given variant
-        if line == '': # If reach end of file but the given SNP is not found, something is wrong
-            print('\nError: reached end of file', fh, end='')
-            print(f', but SNP {snp} is not found.')
-            print('- Do your *.info.gz files contain extra SNPs not found in VCFs? Try using make_info.py to create new info files\nExit')
-            exit()
+
+    if line == '': # If reach end of file but the given SNP is not found, something is wrong
+        print(f'\nError: reached end of file {fh.name}, but SNP {snp} is not found.')
+        print('- Do your *.info.gz files contain extra SNPs not found in VCFs? Try using make_info.py to create new info files\nExit')
+        exit()
     return line
 
 # This function takes in a variant ID,

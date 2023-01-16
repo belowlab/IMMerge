@@ -170,8 +170,10 @@ def search_SNP_and_read_lines(snp, fh):
             line = fh.readline().strip()  # Read in each line to search for the given variant
 
     if line == '': # If reach end of file but the given SNP is not found, something is wrong
-        print(f'\nError: reached end of file {fh.name}, but SNP {snp} is not found.')
-        print('- Do your *.info.gz files contain extra SNPs not found in VCFs? Try using make_info.py to create new info files\nExit')
+        print(f'\nError: reached end of file {fh.name}, but SNP {snp} is not found. Check:')
+        print('- Do your *.info.gz files contain extra SNPs not found in VCFs? Try using make_info.py to create new info files')
+        print('- Are your VCF files sorted? For example: chr1:12345:A:C chr1:12345:A:CA chr1:12345:A:G')
+        print('Exit')
         exit()
     return line
 

@@ -1,7 +1,7 @@
 # IMMerge: Merging imputation data at scale
 
 ## Cite IMMerge
-Zhu W., Chen H-H, Petty A.S., Petty L.E., Polikowsky H.G., Gamazon E.R., Below J.E., Highland H.M. (2022). *IMMerge: Merging imputation data at scale*. manuscript submitted for publication
+Zhu W, Chen HH, Petty AS, Petty LE, Polikowsky HG, Gamazon ER, Below JE, Highland HM. *IMMerge: merging imputation data at scale*. Bioinformatics. 2023 Jan 1;39(1):btac750. doi: 10.1093/bioinformatics/btac750. PMID: 36413071; PMCID: PMC9805583.
 
 ## About
 Genomic data is often processed in batches and analyzed together to save time. However, it is challenging to combine multiple large VCFs and properly handle imputation quality and missing variants due to limitations of available tools. To address these concerns, we developed IMMerge, a Python-based tool that takes advantage of multiprocessing to reduce running time. For the first time in a publicly available tool, imputation quality scores are correctly combined with Fisher’s z transformation.

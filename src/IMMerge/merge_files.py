@@ -398,6 +398,9 @@ def run_merge_files(args):
     log_fh = open(dict_flags['--output'] + '.log', 'w')
     log_fh.write(LOG_TXT+'\n')
 
-if __name__ == '__main__': # Called as commandline tool
+def run_merge_files_script_entry():
     run_merge_files('')
+
+if __name__ == '__main__': # Called as commandline tool
+    run_merge_files_script_entry()
 # If run as a module in python script, must pass a dictionary arguments to run_merge_files()

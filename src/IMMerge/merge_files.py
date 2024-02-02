@@ -238,9 +238,14 @@ def merge_files(dict_flags, inx_info_column, inx_indiv_id_starts, lst_input_fh, 
     # And replace ALT_frq, MAF and r2 values in INFO column with new values calculated from all input files
     # - ie, use these columns in variant_kept.txt file: ALT_Frq_combined, MAF_combined, Rsq_combined, Genotyped
     count = 0  # For console output
-    fh_snp_kept = open(dict_flags['--output']+'_variants_retained.info.txt')
-    print('\t'+dict_flags['--output']+'_variants_retained.info.txt file loaded\n')
-    LOG_TXT += '\t'+dict_flags['--output']+'_variants_retained.info.txt file loaded\n\n'
+    if dict_flags['--retained_snp_list'] != 'None':
+        fh_snp_kept = open(dict_flags['--retained_snp_list'])
+        print('\t'+dict_flags['--retained_snp_list']+'\n')
+        LOG_TXT += '\t'+dict_flags['--retained_snp_list']+'\n\n'
+    else:
+        fh_snp_kept = open(dict_flags['--output']+'_variants_retained.info.txt')
+        print('\t'+dict_flags['--output']+'_variants_retained.info.txt file loaded\n')
+        LOG_TXT += '\t'+dict_flags['--output']+'_variants_retained.info.txt file loaded\n\n'
 
     # Read the first line (header), find index of combined ALT_freq, MAF, Rsq
     line = fh_snp_kept.readline().strip().split()

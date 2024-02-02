@@ -1,0 +1,36 @@
+IMMerge Version 0.0.4
+Job starts at (local time) 2024-02-01 17:55:46
+	--input: ['data_sample/sample_group1.dose.vcf.gz', 'data_sample/sample_group2.dose.vcf.gz', 'data_sample/sample_group3.dose.vcf.gz']
+	--info: ['data_sample/sample_group1.info.gz', 'data_sample/sample_group2.info.gz', 'data_sample/sample_group3.info.gz']
+	--output: output_sample/modified_merged_sample
+	--retained_snp_list: data_sample/modified_merged_sample_variants_retained.info.txt
+	--thread: 1
+	--missing: 1
+	--na_rep: .
+	--r2_threshold: 0
+	--r2_output: z_transformation
+	--r2_offset: 0.001
+	--duplicate_id: 0
+	--check_duplicate_id: True
+	--write_with: bgzip
+	--meta_info: 1
+	--mixed_genotype_status: False
+	--genotyped_label: TYPED/TYPED_ONLY
+	--imputed_label: IMPUTED
+	--use_rsid: False
+	--verbose: False
+
+Number of variants retained: 8
+Numbers of individuals in each input file: [10, 20, 15]
+
+Start merging files:
+	Individual genotype data starts from column #: 10
+	Checking sample ID duplication: Duplicate sample IDs are saved in output_sample/dup_IDs.txt
+	Merged header lines (lines start with #)
+	data_sample/modified_merged_sample_variants_retained.info.txt
+
+
+
+Duration: 0.00 hours, 0.00 minutes, 0.39 seconds
+
+End of run

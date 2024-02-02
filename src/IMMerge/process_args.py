@@ -3,6 +3,9 @@
 # Possible flags are:
 # --input: (Required) input file names
 # --output: (Required) output file names without suffix (eg. BioVU_chr21)
+# --retained_snp_list: (Optional)
+#   A file created such as merged_sample_variants_retained.info.txt in the example output.
+#   In case user needs to use manually modified retained SNP list instead of the list created by IMMerge.
 # --thread: (Optional)
 #   Default is 1
 #   Defines how many thread to use in multiprocessing
@@ -38,7 +41,7 @@ def process_args(arg_list = ''):
     '''
 
     parser = argparse.ArgumentParser()
-    lst_args = ['--input', '--info', '--output', '--thread', '--missing', '--na_rep', '--r2_threshold', '--r2_output',
+    lst_args = ['--input', '--info', '--output', '--retained_snp_list', '--thread', '--missing', '--na_rep', '--r2_threshold', '--r2_output',
                 '--r2_offset', '--duplicate_id', '--check_duplicate_id', '--write_with', '--meta_info', '--mixed_genotype_status',
                 '--genotyped_label', '--imputed_label', '--use_rsid', '--verbose']
     # Help messages of each option
@@ -46,6 +49,7 @@ def process_args(arg_list = ''):
         '--input': '(Required) Files to be merged, multiple files are allowed. Must in gzipped or bgziped VCF format',
         '--info': '(Optional) Directory/name to info files. Default path is the same directory as corresponding input file, default info files share the same name as input file, except for suffix (.info.gz)',
         '--output': '(Optional) Default is "merged.vcf.gz" and saved at current working directory. Output file name without suffix',
+        '--retained_snp_list': '(Optional) Default is None. In case user needs to use modified retained SNP list instead of the file created by IMMerge. The program will not create a new *variants_retained.info.txt if this option is provided.',
         '--thread': '(Optional) Default value is 1. Defines how many thread to use in multiprocessing. If number of threads <0, will use 1 instead of user supplied value.',
         '--missing': '(Optional) Default is 0. Defines number of missing values allowed for each variant',
         '--na_rep': '(Optional) Default is "." (ie. ".|." for genotype values). Defines what symbol to use for missing values. This flag is ignored if --missing is 0',
@@ -66,6 +70,7 @@ def process_args(arg_list = ''):
     # --r2_output and --verbose also have choices from limited values
     dict_default = {'--info': ['', str],
                     '--output': ['merged', str],
+                    '--retained_snp_list':['None', str],
                     '--thread': [1, int],
                     '--missing': [0, int],
                     '--na_rep': ['.', str],
@@ -138,19 +143,27 @@ def process_args(arg_list = ''):
             print(f"Error: Input file not found: {val}")
             exit()
 
-    # Check --info
-    if len(dict_flags['--input']) != len(dict_flags['--info']):
-        print(f"Error: number of input files ({len(dict_flags['--input'])}) does not match number of info files ({len(dict_flags['--info'])}).\nExit")
-        exit()
-    for info_file in dict_flags['--info']:
-        if not os.path.isfile(info_file):
-            print(f"Error: Info file ({info_file}) does not exist.\nExit")
-            exit()
-
     # Check --output
     path, fn = os.path.split(dict_flags['--output'])
     if path != '' and (not os.path.isdir(path)): # Create output directory if does not exist
         os.mkdir(path)
+    
+    # Check --retained_snp_list
+    if dict_flags['--retained_snp_list'] != 'None': # Use user supplied retained SNP list. Check columns
+        print('A *variants_retained.info.txt is provided. IMMerge will not create a new file using info files.')
+        # Check if file exists
+        if not os.path.isfile(dict_flags['--retained_snp_list']):
+            print(f"Error: Retained SNP list provided does not exist.\nExit")
+            exit()
+    else:
+        # Check --info if retained SNP list is not provided
+        if len(dict_flags['--input']) != len(dict_flags['--info']):
+            print(f"Error: number of input files ({len(dict_flags['--input'])}) does not match number of info files ({len(dict_flags['--info'])}).\nExit")
+            exit()
+        for info_file in dict_flags['--info']:
+            if not os.path.isfile(info_file):
+                print(f"Error: Info file ({info_file}) does not exist.\nExit")
+                exit()
 
     # Check --thread
     if dict_flags['--thread'] <= 0: dict_flags['--thread'] = 1  # Assign 1 to --thread if user supplied a value<=0

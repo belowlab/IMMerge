@@ -26,6 +26,7 @@ IMMerge completed the merge more quickly than bcftools. The biggest improvement 
 	* ```--input```: (Required) files to be merged, multiple files are allowed
 	* ```--info```:  (Optional) Directory/name to info files. Default path is the same directory as corresponding input file, default info file share the same name as input file, except for suffix (.info.gz)
 	* ```--output```: (Optional) Default is merged.vcf.gz and saved at current working directory. Output file name without suffix.
+    * ```--retained_snp_list```: (Optional) Default is None. In case user needs to use modified retained SNP list instead of the file created by IMMerge. The program will not create a new *variants_retained.info.txt if this option is provided. Must have these columns: SNP (the first column), ALT_Frq_combined, MAF_combined, Rsq_combined, Genotyped
 	* ```--thread```: (Optional) Defines how many threads to use in multiprocessing.
 		* Default value is 1.
 		* Valid values are integers. If number of threads <0, will use 1 instead of user supplied value
@@ -144,6 +145,17 @@ cd IMMerge
 python src/IMMerge/merge_files.py \
 	--input data_sample/sample_group1.dose.vcf.gz data_sample/sample_group2.dose.vcf.gz data_sample/sample_group3.dose.vcf.gz \
 	--output output_sample/merged_sample \
+	--check_duplicate_id true \
+	--missing 1
+```
+
+3. Example merging sample data using user supplied retained SNP list ```./data_sample/modified_merged_sample_variants_retained.info.txt```, output files are saved in ```./output_sample/```.
+```bash
+cd IMMerge
+python src/IMMerge/merge_files.py \
+	--input data_sample/sample_group1.dose.vcf.gz data_sample/sample_group2.dose.vcf.gz data_sample/sample_group3.dose.vcf.gz \
+	--output output_sample/modified_merged_sample \
+	--retained_snp_list data_sample/modified_merged_sample_variants_retained.info.txt \
 	--check_duplicate_id true \
 	--missing 1
 ```

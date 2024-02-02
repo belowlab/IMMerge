@@ -153,7 +153,9 @@ def __calculate_r2_maf_altFrq(df_merged, col_name_r2_combined,
             start_pos = lst_tmp.index('FORMAT')
             total_len = len(lst_tmp)
             lst_number_of_individuals.append(total_len-(start_pos+1))
-
+    if dict_flags['--retained_snp_list'] != 'None': # If retained SNP list is provided, no need to run rest of the function
+        return lst_number_of_individuals
+    
     # Calculate weighted r2 use this equation:
     # r2_combined = sum(r2_groupX * number_of_individuals_groupX) / sum(number_of_individuals_groupX)
     lst_col_names_r2_adj = []   # A list to store column names of r2 * weight
@@ -347,15 +349,25 @@ def __process_output(df_merged, dict_flags, lst_index_col_names):
         log_fh.write('\nNumbers of individuals in each input file: '+str(lst_number_of_individuals))
 
     return lst_number_of_individuals, len(df_merged[mask_to_keep]) # Return list of number of individuals and number of SNPs kept
-# ---------------- End opf helper functions -----------------
+# ---------------- End of helper functions -----------------
 
 # A wrapper function to run this script
 # Returns dict_flags for next step
 def get_snp_list(dict_flags):
-    lst_info_df = __get_lst_info_df(dict_flags)
-    df_merged, lst_index_col_names = __merge_snps(lst_info_df)
-    print('\nNumber of variants:')
-    print('\tTotal number from all input files:', len(df_merged))
-    lst_number_of_individuals, number_snps_kept = __process_output(df_merged, dict_flags, lst_index_col_names)
+    if dict_flags['--retained_snp_list'] != 'None': # If retained SNP list is provided, use that file directly
+        lst_number_of_individuals = __calculate_r2_maf_altFrq(None, None, None, None, dict_flags)
+        number_snps_kept = 0
+        with open(dict_flags['--retained_snp_list']) as fh:
+            line = fh.readline() # Skip header
+            line = fh.readline().strip()
+            while line != '':
+                number_snps_kept += 1
+                line = fh.readline().strip()
+    else:
+        lst_info_df = __get_lst_info_df(dict_flags)
+        df_merged, lst_index_col_names = __merge_snps(lst_info_df)
+        print('\nNumber of variants:')
+        print('\tTotal number from all input files:', len(df_merged))
+        lst_number_of_individuals, number_snps_kept = __process_output(df_merged, dict_flags, lst_index_col_names)
     return lst_number_of_individuals, number_snps_kept # These return values are used in the final merging step
 
